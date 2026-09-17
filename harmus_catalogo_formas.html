@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Harmus — Formas & Cores</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#fff;font-family:'Geist Mono',monospace;color:#555;padding:26px 30px;}
+.opus-hd{font-size:11px;color:#999;letter-spacing:6px;text-transform:uppercase;}
+h1{font-size:16px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#111;margin-bottom:4px;}
+.sub{font-size:11px;color:#999;margin-bottom:34px;letter-spacing:.5px;}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.backbtn{background:#e6e6e6;color:#555;font-family:inherit;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:8px 16px;border-radius:18px;text-decoration:none;white-space:nowrap;}
+h2{font-size:12px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:#555;margin:34px 0 4px;padding-bottom:6px;border-bottom:1px solid #eee;}
+.h2desc{font-size:9px;color:#999;margin-bottom:14px;line-height:1.5;}
+.colornote{font-size:9px;color:#999;margin:6px 0 18px;letter-spacing:.3px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:18px;}
+.item{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.item .nm{font-size:9px;color:#999;letter-spacing:.3px;text-align:center;}
+.wheels{display:flex;flex-wrap:wrap;gap:22px;margin-top:6px;}
+.wheelcard{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.wheelcard .wl{font-size:9px;color:#999;}
+.legend{display:flex;gap:36px;margin-top:22px;flex-wrap:wrap;}
+.legend table{border-collapse:collapse;font-size:9px;}
+.legend td,.legend th{padding:3px 8px;border:0.5px solid #eee;text-align:left;}
+.legend th{color:#999;font-weight:500;text-transform:uppercase;letter-spacing:.5px;font-size:8px;}
+.foot{margin-top:40px;font-size:9px;color:#bbb;letter-spacing:.5px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="opus-hd">HARMUS</div>
+  <a class="backbtn" id="backlink" href="index.html">← voltar</a>
+</div>
+<script>if(window.self!==window.top){const b=document.getElementById('backlink');if(b)b.style.display='none';}</script>
+<h1>Formas &amp; Cores</h1>
+<div class="sub">catálogo visual · formas do projeto e a paleta cromática completa</div>
+<div class="colornote" id="color-note"></div>
+
+<h2>Articulações</h2>
+<div class="grid" id="g-art"></div>
+
+<h2>Ornamentos</h2>
+<div class="grid" id="g-orn"></div>
+
+<h2>Efeitos e técnicas</h2>
+<div class="grid" id="g-efe"></div>
+
+<h2>Crescendo / Diminuendo</h2>
+<div class="h2desc">
+Não é um ícone fixo — é a forma normal mudando de tamanho: cresc. 1.0×→1.4× · dim. 1.0×→0.4×.
+</div>
+<div class="grid" id="g-dyn"></div>
+
+<h2>Todas as cores possíveis</h2>
+<div class="h2desc">
+Cada roda é uma oitava. Ângulo = nota (deslocado pela alteração) · raio = dinâmica, do centro (mais apagada) até a borda (mais cheia). Só as combinações que o projeto realmente gera.
+</div>
+<div class="wheels" id="wheels"></div>
+
+<div class="legend">
+  <div>
+    <table id="ring-legend"><tr><th>Raio (de dentro p/ fora)</th><th>Dinâmica</th><th>Saturação</th></tr></table>
+  </div>
+  <div>
+    <table id="alt-legend"><tr><th>Alteração</th><th>Multiplicador de matiz</th></tr></table>
+  </div>
+</div>
+
+<div class="foot">Harmus · mesmas fórmulas de cor do projeto (STEP_HUE, alterHueShift, octaveBright, DYN_SAT/DYN_ATTACK) e de tamanho (crescendo/diminuendo, drawNote2D) — nenhuma cor ou proporção interpolada ou inventada</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>
+// ── formas (mesma lógica de desenho do catálogo original, só sem texto de especificação) ──
+function artPolygon(art, side){
+  let top;
+  switch(art){
+    case 1: { const pts=[[-0.5,0.5],[-0.5,-0.5],[0.5,-0.5]]; return clipHalf(pts,side); }
+    case 2: { const pts=[[-0.5,-0.5],[-0.5,0.5],[0.1,0.5],[0.5,-0.5]]; return clipHalf(pts,side); }
+    case 3: { const pts=[[-0.5,-0.5],[-0.28,0.5],[0.28,0.5],[0.5,-0.5]]; return clipHalf(pts,side); }
+    case 4: { const pts=[[-0.5,-0.5],[-0.5,0.15],[0.5,0.5],[0.5,-0.5]]; return clipHalf(pts,side); }
+    case 5: { const pts=[[-0.5,-0.15],[0.5,0.5],[0.5,-0.5]]; return clipHalf(pts,side); }
+    case 6: { const pts=[[-0.5,-0.5],[-0.28,-0.5],[0.5,0.5],[0.28,0.5]]; return clipHalf(pts,side); }
+    case 7: { const pts=[[-0.5,-0.5],[-0.5,0.5],[-0.15,0.5],[0,0.28],[0.15,0.5],[0.5,0.5],[0.5,-0.5]]; return clipHalf(pts,side); }
+    default: top=[[-0.5,0.5],[0.5,0.5]]; break;
+  }
+  return clipHalf(top.concat([[0.5,-0.5],[-0.5,-0.5]]), side);
+}
+function clipHalf(pts, side){ if(side==='full'||!side)return pts; const kl=(side==='left');const o=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];const ai=kl?a[0]<=0:a[0]>=0,bi=kl?b[0]<=0:b[0]>=0;if(ai)o.push(a);if(ai!==bi){const t=(0-a[0])/(b[0]-a[0]);o.push([0,a[1]+(b[1]-a[1])*t]);}}return o;}
+// cor real das formas: F, oitava 4, dinâmica mf — mesmas fórmulas do projeto (não é azul inventado)
+function hsbToRgb(h,s,b){h=((h%360)+360)%360;const c=b*s,x=c*(1-Math.abs((h/60)%2-1)),m=b-c;let r=0,g=0,bl=0;if(h<60){r=c;g=x;}else if(h<120){r=x;g=c;}else if(h<180){g=c;bl=x;}else if(h<240){g=x;bl=c;}else if(h<300){r=x;bl=c;}else{r=c;bl=x;}return[Math.round((r+m)*255),Math.round((g+m)*255),Math.round((bl+m)*255)];}
+const octaveBright=(o)=>Math.max(0.20,Math.min(1.0,0.20+o*0.10));
+const COL=hsbToRgb(154, 0.70, octaveBright(4)); // F natural, oitava 4, mf
+document.getElementById('color-note').textContent=`cor das formas: F · oitava 4 · mf — rgb(${COL.join(',')})`;
+
+function card(container, name, drawFn){
+  const wrap=document.createElement('div');wrap.className='item';
+  const cv=document.createElement('div');
+  wrap.appendChild(cv);
+  const nm=document.createElement('div');nm.className='nm';nm.textContent=name;
+  wrap.appendChild(nm);
+  document.getElementById(container).appendChild(wrap);
+  new p5(function(p){p.setup=function(){const c=p.createCanvas(60,60);c.parent(cv);p.pixelDensity(2);p.noLoop();};p.draw=function(){p.clear();drawFn(p);};});
+}
+const shp=(art)=>(p)=>{p.noStroke();p.fill(...COL);const poly=artPolygon(art,'full');p.beginShape();for(const[px,py]of poly)p.vertex(30+px*44,30-py*44);p.endShape(p.CLOSE);};
+
+// articulações
+card('g-art','Normal',shp(0));
+card('g-art','Staccatíssimo',shp(1));
+card('g-art','Staccato',shp(2));
+card('g-art','Tenuto',shp(3));
+card('g-art','Acento',shp(4));
+card('g-art','Marcato',shp(5));
+card('g-art','Sforzando',shp(6));
+card('g-art','Portato',shp(7));
+card('g-art','Duas articulações',(p)=>{
+  p.noStroke();p.fill(...COL);
+  let poly=artPolygon(2,'left');p.beginShape();for(const[px,py]of poly)p.vertex(30+px*44,30-py*44);p.endShape(p.CLOSE);
+  poly=artPolygon(4,'right');p.beginShape();for(const[px,py]of poly)p.vertex(30+px*44,30-py*44);p.endShape(p.CLOSE);
+});
+
+// ornamentos
+card('g-orn','Tremolo',(p)=>{
+  p.noStroke();p.fill(...COL);const d=3,cell=44/d;for(let ix=0;ix<d;ix++)for(let iy=0;iy<d;iy++)if((ix+iy)%2===0)p.rect(8+ix*cell,8+iy*cell,cell*0.9,cell*0.9);
+});
+card('g-orn','Trinado (trill)',(p)=>{
+  p.noStroke();p.fill(...COL);const nb=3,seg=44/nb;for(let k=0;k<nb;k++){const up=(k%2===0)?-6:6;p.rect(8+k*seg,26+up,seg*0.8,16);}
+});
+card('g-orn','Grupeto (turn)',(p)=>{
+  p.noStroke();p.fill(...COL);const pat=[0,1,0,-1],nf=4,seg=44/nf;for(let k=0;k<nf;k++)p.rect(8+k*seg,18+pat[k]*8,seg*0.9,24);
+});
+card('g-orn','Mordente',(p)=>{
+  p.noStroke();p.fill(...COL);const pat=[0,-1,0],nf=3,seg=44/nf;for(let k=0;k<nf;k++)p.rect(8+k*seg,18+pat[k]*8,seg*0.9,24);
+});
+card('g-orn','Apojatura (grace)',(p)=>{
+  p.noStroke();p.fill(...COL);p.rectMode(p.CENTER);p.rect(30,30,22,22);
+});
+
+// efeitos
+card('g-efe','Glissando',(p)=>{
+  p.noStroke();p.fill(...COL);
+  p.beginShape();p.vertex(8,52);p.vertex(18,52);p.vertex(52,8);p.endShape(p.CLOSE);
+});
+card('g-efe','Pizzicato',(p)=>{
+  p.noStroke();p.fill(...COL);p.beginShape();p.vertex(30,8);p.vertex(52,52);p.vertex(8,52);p.endShape(p.CLOSE);
+});
+card('g-efe','Pedal',(p)=>{
+  p.noStroke();p.fill(...COL);p.rect(8,8,44,22);p.fill(COL[0],COL[1],COL[2],110);p.rect(8,30,44,22);
+});
+card('g-efe','Arpejo',(p)=>{
+  p.noStroke();p.fill(...COL);
+  p.beginShape();p.vertex(8,8);p.vertex(22,8);p.vertex(30,38);p.vertex(38,8);p.vertex(52,8);p.vertex(52,52);p.vertex(8,52);p.endShape(p.CLOSE);
+});
+card('g-efe','Fermata',(p)=>{
+  p.noStroke();p.fill(...COL);p.rect(6,18,30,24);p.fill(COL[0],COL[1],COL[2],120);p.rect(40,18,14,24);
+});
+card('g-efe','Percussão',(p)=>{
+  p.noStroke();p.fill(140,140,140);p.rectMode(p.CENTER);p.rect(30,30,44,44);
+});
+card('g-efe','Harmônico',(p)=>{
+  p.noStroke();p.fill(...COL);
+  p.beginShape();p.vertex(8,8);p.vertex(52,8);p.vertex(52,30);p.vertex(8,22);p.endShape(p.CLOSE);
+});
+card('g-efe','Surdina',(p)=>{
+  p.noStroke();p.fill(...COL);p.push();p.translate(30,30);p.rotate(Math.PI/4);p.rectMode(p.CENTER);p.rect(0,0,32,32);p.pop();
+});
+
+// crescendo / diminuendo — mesma fórmula de tamanho do drawNote2D: cresc 1.0→1.4× · dim 1.0→0.4×
+const dynShape=(mult)=>(p)=>{p.noStroke();p.fill(...COL);p.rectMode(p.CENTER);p.rect(30,30,26*mult,26*mult);};
+[0,0.25,0.5,0.75,1].forEach(pos=>card('g-dyn',`cresc · ${Math.round(pos*100)}%`,dynShape(1.0+pos*0.4)));
+[0,0.25,0.5,0.75,1].forEach(pos=>card('g-dyn',`dim · ${Math.round(pos*100)}%`,dynShape(1.0-pos*0.6)));
+</script>
+
+<script>
+// ── rodas cromáticas: exatamente as fórmulas de cor do harmus.html ──
+(function(){
+  const STEP_HUE={C:0,D:51,E:103,F:154,G:206,A:257,B:309};
+  const NOTES=Object.keys(STEP_HUE);
+  // mesmos multiplicadores de alterHueShift(h,a): a<=-1→×0.80 · a=0→×1.00 · a===1→×1.10 · a>=2→×1.20
+  const ALTS=[
+    {label:'♭ (bemol/dobrado bemol)', mult:0.80},
+    {label:'natural',                 mult:1.00},
+    {label:'♯ (sustenido)',           mult:1.10},
+    {label:'♯♯ (dobrado sustenido)',  mult:1.20}
+  ];
+  // mesmas fórmulas de octaveBright e DYN_SAT/DYN_ATTACK/DYN_AFTER, unificadas e ordenadas por saturação
+  const RINGS=[
+    {sat:0.15, label:'ppp'},
+    {sat:0.25, label:'pp'},
+    {sat:0.40, label:'p · fp (depois)'},
+    {sat:0.55, label:'mp'},
+    {sat:0.70, label:'mf · sf/fz/sfz (depois)'},
+    {sat:0.82, label:'f'},
+    {sat:0.90, label:'sf (ataque)'},
+    {sat:0.92, label:'ff'},
+    {sat:0.95, label:'fz (ataque)'},
+    {sat:1.00, label:'fff · sfz/fp (ataque)'}
+  ];
+  const OCTS=[0,1,2,3,4,5,6,7,8];
+  function octaveBright(o){return Math.max(0.20,Math.min(1.0,0.20+o*0.10));}
+  function hsbToRgb(h,s,b){h=((h%360)+360)%360;const c=b*s,x=c*(1-Math.abs((h/60)%2-1)),m=b-c;let r=0,g=0,bl=0;if(h<60){r=c;g=x;}else if(h<120){r=x;g=c;}else if(h<180){g=c;bl=x;}else if(h<240){g=x;bl=c;}else if(h<300){r=x;bl=c;}else{r=c;bl=x;}return[Math.round((r+m)*255),Math.round((g+m)*255),Math.round((bl+m)*255)];}
+
+  function drawWheel(canvas, brightness){
+    const ctx=canvas.getContext('2d');
+    const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+    const innerR=12, outerR=Math.min(W,H)/2-14;
+    const ringW=(outerR-innerR)/RINGS.length;
+    ctx.clearRect(0,0,W,H);
+    ctx.beginPath();ctx.arc(cx,cy,outerR,0,Math.PI*2);ctx.strokeStyle='#f0f0f0';ctx.stroke();
+
+    const wedgeHalf=4*Math.PI/180; // meia-largura angular de cada cunha
+    NOTES.forEach(nt=>{
+      ALTS.forEach(alt=>{
+        const hueDeg=(STEP_HUE[nt]*alt.mult)%360;
+        const angRad=(hueDeg-90)*Math.PI/180;
+        RINGS.forEach((ring,ri)=>{
+          const r0=innerR+ri*ringW, r1=r0+ringW*0.92;
+          const [r,g,b]=hsbToRgb(hueDeg,ring.sat,brightness);
+          ctx.beginPath();
+          ctx.arc(cx,cy,r1,angRad-wedgeHalf,angRad+wedgeHalf,false);
+          ctx.arc(cx,cy,r0,angRad+wedgeHalf,angRad-wedgeHalf,true);
+          ctx.closePath();
+          ctx.fillStyle=`rgb(${r},${g},${b})`;
+          ctx.fill();
+        });
+      });
+    });
+    ctx.fillStyle='#aaa';ctx.font='9px Geist Mono, monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    NOTES.forEach(nt=>{
+      const angRad=(STEP_HUE[nt]-90)*Math.PI/180;
+      const lx=cx+Math.cos(angRad)*(outerR+9), ly=cy+Math.sin(angRad)*(outerR+9);
+      ctx.fillText(nt,lx,ly);
+    });
+  }
+
+  const wheelsEl=document.getElementById('wheels');
+  OCTS.forEach(oct=>{
+    const b=octaveBright(oct);
+    const wc=document.createElement('div');wc.className='wheelcard';
+    const cv=document.createElement('canvas');cv.width=190;cv.height=190;
+    const wl=document.createElement('div');wl.className='wl';wl.textContent=`oitava ${oct} · brilho ${Math.round(b*100)}%`;
+    wc.appendChild(cv);wc.appendChild(wl);
+    wheelsEl.appendChild(wc);
+    drawWheel(cv,b);
+  });
+
+  const rt=document.getElementById('ring-legend');
+  RINGS.forEach((ring,i)=>{
+    rt.innerHTML+=`<tr><td>${i+1}</td><td>${ring.label}</td><td>${Math.round(ring.sat*100)}%</td></tr>`;
+  });
+  const at=document.getElementById('alt-legend');
+  ALTS.forEach(alt=>{
+    at.innerHTML+=`<tr><td>${alt.label}</td><td>×${alt.mult.toFixed(2)}</td></tr>`;
+  });
+})();
+</script>
+</body>
+</html>
