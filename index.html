@@ -28,6 +28,7 @@ canvas{display:block;}
 #worknav{position:absolute;top:110px;left:2.08%;z-index:8;display:flex;align-items:center;gap:8px;height:44px;}
 .navbtn{width:56px;height:44px;border-radius:22px;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 #worknum{width:56px;height:44px;border-radius:22px;background:#e6e6e6;display:flex;align-items:center;justify-content:center;font-size:16px;color:#333;}
+#btn-newwork{width:32px;height:32px;border-radius:50%;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:4px;flex-shrink:0;}
 
 /* barra de cores — SVG: x=49 y=222 w=36 h=667 */
 #color-bar{position:absolute;left:2.4%;top:20.5%;width:22px;height:58%;background:#e0e0e0;z-index:5;display:flex;flex-direction:column;border-radius:11px;overflow:hidden;}
@@ -95,7 +96,7 @@ canvas{display:block;}
     <div id="worknum">1 / 5</div>
     <button id="nav-next" class="navbtn">→</button>
     <input type="file" id="file-input-2" accept=".xml,.musicxml,.mxl" style="display:none;">
-    <button id="btn-newwork" style="display:none;">+ obra</button>
+    <button id="btn-newwork" title="carregar seu arquivo .musicxml / .mxl">+</button>
     <button id="btn-restart" style="display:none;"></button>
   </div>
 
@@ -517,13 +518,14 @@ if(btnNew){
   btnNew.addEventListener('click',()=>fileInput2.click());
   fileInput2.addEventListener('change',e=>{ if(e.target.files[0]){ isPlaying=false; document.getElementById('btn-play').textContent='▶'; handleFile(e.target.files[0]); } });
 }
-// ── as 5 obras (urls a vincular quando os .mxl chegarem) ──
+// ── as obras (linkadas na pasta /obras do repositório) ──
 const WORKS=[
-  {title:'Obra 1', url:null},
-  {title:'Obra 2', url:null},
-  {title:'Obra 3', url:null},
-  {title:'Obra 4', url:null},
-  {title:'Obra 5', url:null},
+  {title:'Arabesco No. 1 — Debussy', url:'https://raw.githubusercontent.com/brnrcintra-eng/Harmus/main/obras/arabesque-no-1-claude-debussy-orchestration.mxl'},
+  {title:'Sinfonia No. 5, Op. 67 (1º mov.) — Beethoven', url:'https://raw.githubusercontent.com/brnrcintra-eng/Harmus/main/obras/beethoven-symphony-no-5-op67-mvt-1.mxl'},
+  {title:'Boléro — Ravel', url:'https://raw.githubusercontent.com/brnrcintra-eng/Harmus/main/obras/bolero-maurice-ravel.mxl'},
+  {title:'Requiem (Totenmesse) — Verdi', url:'https://raw.githubusercontent.com/brnrcintra-eng/Harmus/main/obras/requiem-totenmesse-giuseppi-verdi.mxl'},
+  {title:'Sinfonia No. 9, Final "Ode à Alegria"', url:'https://raw.githubusercontent.com/brnrcintra-eng/Harmus/main/obras/symphony-no-9-finale-ode-to-joy-symphony-spectacular-collosus-800-followers.mxl'},
+  {title:'Valsa No. 2 — Schwartz', url:'https://raw.githubusercontent.com/brnrcintra-eng/Harmus/main/obras/waltz-no-2-schwartz.mxl'},
 ];
 let curWork=0;
 const navPrev=document.getElementById('nav-prev'), navNext=document.getElementById('nav-next'), worknumEl=document.getElementById('worknum');
