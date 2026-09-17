@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Harmus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{ --mg:40px; --gut:20px; } /* margem e gutter do grid de 8 col */
+body{background:#fff;overflow:hidden;font-family:'Geist Mono',monospace;color:#555;}
+canvas{display:block;}
+
+#upload-screen{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;background:#fff;}
+.opus-hd{font-size:11px;color:#999;letter-spacing:6px;text-transform:uppercase;}
+#status{font-size:8px;color:#aaa;letter-spacing:2px;}
+
+#app{position:fixed;inset:0;display:none;}
+.panel{position:absolute;overflow:hidden;background:#fff;}
+
+/* ── TOPO ── (base 1920×1080) */
+#h-title{position:absolute;top:8%;left:2.08%;transform:translateY(-100%);font-size:30px;font-style:italic;font-weight:400;letter-spacing:0px;color:#111;z-index:8;max-width:44%;line-height:1.1;}
+#h-author{position:absolute;top:8%;left:50.5%;transform:translateY(-100%);font-size:18px;font-weight:400;letter-spacing:0px;color:#333;z-index:8;}
+#tag{position:absolute;bottom:2%;right:2.08%;font-size:12px;letter-spacing:2px;color:#999;z-index:8;}
+
+/* navegacao (pilulas) abaixo do titulo — SVG: x=40 y=114 w=67 h=51 */
+#worknav{position:absolute;top:110px;left:2.08%;z-index:8;display:flex;align-items:center;gap:8px;height:44px;}
+.navbtn{width:56px;height:44px;border-radius:22px;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#worknum{width:56px;height:44px;border-radius:22px;background:#e6e6e6;display:flex;align-items:center;justify-content:center;font-size:16px;color:#333;}
+
+/* barra de cores — SVG: x=49 y=222 w=36 h=667 */
+#color-bar{position:absolute;left:2.4%;top:20.5%;width:22px;height:58%;background:#e0e0e0;z-index:5;display:flex;flex-direction:column;border-radius:11px;overflow:hidden;}
+
+/* anel central */
+#p-ring{left:9%;top:13%;width:48%;height:80%;}
+
+/* painel direito cinza — SVG: x=1202 y=86 w=678 h=882 */
+#right-panel{position:absolute;left:62.6%;top:8%;width:35.3%;height:81.7%;background:transparent;z-index:1;}
+#p-slice{left:65.6%;top:19.8%;width:32%;height:42%;z-index:2;background:transparent;}
+#p-notes{left:65.6%;top:53%;width:32%;height:9%;z-index:2;background:transparent;}
+
+/* toggles seguir/soando — SVG: x=1071 y=116/180 w=108 h=35, dentro do box */
+#cam-modes{position:absolute;z-index:9;display:flex;flex-direction:column;align-items:flex-start;gap:10px;left:56.25%;top:11.5%;}
+.toggle{background:#e0e0e0;border:0;color:#555;font-family:inherit;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:8px 16px;cursor:pointer;outline:none;border-radius:18px;display:flex;align-items:center;gap:8px;white-space:nowrap;justify-content:center;width:120px;}
+.toggle .led{width:8px;height:8px;border-radius:50%;background:#bbb;}
+.toggle.on .led{background:#222;}
+
+/* cruz de camera — SVG y=910..1043, x=40..380 */
+.cam-b{background:#e6e6e6;border:0;color:#666;font-family:inherit;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;cursor:pointer;outline:none;pointer-events:all;border-radius:17px;}
+.cam-b.on{background:#333;color:#fff;}
+
+/* mixer de naipes — SVG sliders y=587..721 (54%..67% de 1080), dentro do box */
+#mixer-bar{position:absolute;left:64.5%;top:72%;width:30.5%;z-index:6;}
+
+/* player — SVG: box x=505 y=1007 w=910 h=48 */
+#scrub-wrap{position:absolute;left:26.3%;bottom:4.2%;width:47.4%;height:48px;background:#e6e6e6;display:flex;align-items:center;gap:14px;padding:0 20px;border-radius:24px;z-index:7;}
+#btn-play{background:#111;border:0;color:#fff;font-family:inherit;font-size:22px;cursor:pointer;outline:none;line-height:1;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;flex-shrink:0;}
+#scrub-knob{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;background:#111;transform:translate(-50%,-50%);left:0%;pointer-events:none;box-shadow:0 0 0 5px rgba(255,255,255,0.9);}
+#scrub{flex:1;height:12px;background:#d4d4d4;position:relative;cursor:pointer;border-radius:6px;}
+#scrub-fill{height:100%;background:#111;width:0%;border-radius:6px;}
+#scrub-time{font-size:12px;color:#777;min-width:88px;text-align:right;}
+</style>
+</head>
+<body>
+
+
+<div id="upload-screen">
+  <div style="max-width:520px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:22px;padding:0 24px;">
+    <div class="opus-hd" style="font-size:15px;letter-spacing:8px;">HARMUS</div>
+    <div style="font-size:13px;color:#666;line-height:1.7;">
+      Visualização de obras sinfônicas.<br>
+      Cada nota vira cor, forma e posição — traduzindo a partitura em imagem.
+    </div>
+    <div style="display:flex;gap:34px;flex-wrap:wrap;justify-content:center;font-size:11px;color:#888;letter-spacing:0.5px;line-height:1.6;max-width:480px;">
+      <div style="width:180px;"><b style="color:#555;">◍ O anel</b><br>a obra completa, do início ao fim; gire e aproxime com o mouse</div>
+      <div style="width:180px;"><b style="color:#555;">▦ O instante</b><br>o momento atual, distribuído pelo centro conforme a disposição da orquestra</div>
+    </div>
+    <div style="font-size:10px;color:#999;letter-spacing:0.5px;line-height:1.6;">
+      Use <b>← →</b> para trocar de obra · os <b>controles</b> isolam naipes, melodia e harmonia · o <b>player</b> percorre o tempo
+    </div>
+    <button id="btn-start" style="background:#111;color:#fff;border:0;font-family:inherit;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:13px 36px;border-radius:24px;cursor:pointer;margin-top:4px;">▶ iniciar</button>
+    <input type="file" id="file-input" accept=".xml,.musicxml,.mxl" style="display:none;">
+    <div id="status" style="font-size:8px;"></div>
+  </div>
+</div>
+
+<div id="app">
+  <span id="h-title">—</span>
+  <span id="h-author">—</span>
+  <span id="tag">1.01 · HARMUS</span>
+
+  <div id="worknav">
+    <button id="nav-prev" class="navbtn">←</button>
+    <div id="worknum">1 / 5</div>
+    <button id="nav-next" class="navbtn">→</button>
+    <input type="file" id="file-input-2" accept=".xml,.musicxml,.mxl" style="display:none;">
+    <button id="btn-newwork" style="display:none;">+ obra</button>
+    <button id="btn-restart" style="display:none;"></button>
+  </div>
+
+  <div id="color-bar"></div>
+
+  <div class="panel" id="p-ring"></div>
+
+  <div id="cam-modes" style="top:250px;left:calc(58% - 90px);">
+    <button class="toggle on" data-cam="follow"><span class="led"></span>seguir</button>
+    <button class="toggle" id="btn-onlyactive"><span class="led"></span>soando</button>
+  </div>
+
+  <div id="right-panel"></div>
+  <div class="panel" id="p-slice"></div>
+  <div class="panel" id="p-notes"></div>
+
+  <!-- cruz de câmera, canto inferior esquerdo -->
+  <div id="cam-cross" style="position:absolute;left:calc(var(--mg) + 24px);bottom:64px;z-index:8;display:grid;grid-template-columns:56px 70px 56px;grid-template-rows:repeat(3,30px);gap:5px;">
+    <span></span><button class="cam-b" data-cam="top">TOPO</button><span></span>
+    <button class="cam-b" data-cam="side">ESQ</button><button class="cam-b" data-cam="persp">CENTRO</button><button class="cam-b" data-cam="right">DIR</button>
+    <span></span><button class="cam-b" data-cam="front">BASE</button><span></span>
+  </div>
+
+  <div id="mixer-bar"><div id="mixer" style="display:flex;flex-direction:column;gap:8px;width:100%;"></div></div>
+
+  <div id="scrub-wrap">
+    <button id="btn-play">▶</button>
+    <div id="scrub"><div id="scrub-fill"></div><div id="scrub-knob"></div></div>
+    <div id="scrub-time">0:00 / 0:00</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+// ── Cores (mesmas regras) ────────────────────────────────────
+const STEP_HUE={C:0,D:51,E:103,F:154,G:206,A:257,B:309};
+const STEP_SEMI={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+function alterHueShift(h,a){if(a<=-1)return h*0.80;if(a===1)return h*1.10;if(a>=2)return h*1.20;return h;}
+function octaveBright(o){return Math.max(0.20,Math.min(1.0,0.20+o*0.10));}
+const DYN_SAT={ppp:0.15,pp:0.25,p:0.40,mp:0.55,mf:0.70,f:0.82,ff:0.92,fff:1.00};
+const DYN_ATTACK={sf:0.90,fz:0.95,sfz:1.00,fp:1.00}, DYN_AFTER={sf:0.70,fz:0.70,sfz:0.70,fp:0.40};
+function hsbToRgb(h,s,b){h=((h%360)+360)%360;const c=b*s,x=c*(1-Math.abs((h/60)%2-1)),m=b-c;let r=0,g=0,bl=0;if(h<60){r=c;g=x;}else if(h<120){r=x;g=c;}else if(h<180){g=c;bl=x;}else if(h<240){g=x;bl=c;}else if(h<300){r=x;bl=c;}else{r=c;bl=x;}return[(r+m)*255,(g+m)*255,(bl+m)*255];}
+const NOTE_NAMES=['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+function noteName(m){return NOTE_NAMES[m%12]+(Math.floor(m/12)-1);}
+function fmtTime(ms){const s=Math.floor(ms/1000);return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
+
+// ── PAN por instrumento (tabela fixa) ────────────────────────
+// nome (regex) → pan (-48 .. +58), disposição de palco fornecida
+const PAN_TABLE=[
+  [/harp|harpa|arpa/i,-48],
+  [/flaut|flute|piccolo|ottavino/i,-28],
+  [/corno|horn/i,-22],
+  [/violini i|violin i|1st violin|primeiro/i,-12],
+  [/viole|viola/i,-6],
+  [/oboi|oboe|corno inglese|english horn/i,6],
+  [/violini ii|violin ii|2nd violin|segundo/i,12],
+  [/clarinet/i,18],
+  [/celli|cello|violonc/i,24],
+  [/fagott|bassoon/i,30],
+  [/tromb[ae]|trumpet|pist/i,36],
+  [/bassi|contrab|double bass|c\. bassi/i,42],
+  [/timpani/i,46],
+  [/trombone/i,50],
+  [/tuba/i,54],
+  [/drum|tambour|tamburo|triangolo|piatti|cassa|cloches|cann?on|perc/i,58],
+];
+function panFor(name,rawPan){
+  if(rawPan!=null && Math.abs(rawPan)>5) return Math.max(-100,Math.min(100,rawPan));
+  for(const[rx,v]of PAN_TABLE)if(rx.test(name))return v;
+  return 0;
+}
+const NAIPE_RX={
+  cordas:/violin|viola|cello|bass|string|archi|violini|viole|celli|bassi|contrab/i,
+  madeiras:/flute|flauto|oboe|oboi|clarinet|clarinetto|bassoon|fagotto|piccolo|corno inglese|english horn/i,
+  metais:/horn|corno|trumpet|tromba|trombe|trombone|tuba|pist/i,
+  'percussão':/timpani|drum|tambour|tamburo|triangolo|piatti|cassa|cloches|cann?on|perc|cymbal|snare/i,
+  piano:/piano|klavier|keyboard/i,
+  harpa:/harp|arpa/i,
+};
+function detectNaipe(n){for(const[k,rx]of Object.entries(NAIPE_RX))if(rx.test(n||''))return k;return 'outros';}
+
+// articulação → forma exata (polígono). Índices:
+// 0 normal · 1 staccatissimo · 2 staccato · 3 tenuto · 4 acento · 5 marcato · 6 sforzando
+const ART_IDX={none:0,staccatissimo:1,staccato:2,tenuto:3,accent:4,marcato:5,sforzando:6,'detached-legato':7};
+const ART_NAMES=['normal','staccatiss.','staccato','tenuto','acento','marcato','sforzando','portato'];
+// Retorna vértices [x,y] normalizados em x∈[-0.5,0.5], y∈[-0.5,0.5] (y+ = cima).
+// side: 'full' | 'left' (só metade esquerda) | 'right' (só metade direita).
+// Cada forma é definida como polígono; o corte de metade clipa em x=0.
+function artPolygon(art, side){
+  // topo(x): função da altura do topo (y) para um x∈[-0.5,0.5]; base sempre em y=-0.5
+  // definimos o contorno superior por pontos e fechamos na base
+  let top; // lista de [x,yTop]
+  switch(art){
+    case 1: // staccatissimo — triângulo retângulo: topo-esq cheio, hipotenusa até base-dir
+      { const pts=[[-0.5,0.5],[-0.5,-0.5],[0.5,-0.5]]; return clipHalf(pts, side); }
+    case 2: // staccato — trapézio: topo reto até ~0.2, depois desce em diagonal à direita
+      { const pts=[[-0.5,-0.5],[-0.5,0.5],[0.1,0.5],[0.5,-0.5]]; return clipHalf(pts, side); }
+    case 3: // tenuto — trapézio afunilado (topo estreito centralizado, base larga)
+      { const pts=[[-0.5,-0.5],[-0.28,0.5],[0.28,0.5],[0.5,-0.5]]; return clipHalf(pts, side); }
+    case 4: // acento — quadrilátero: topo sobe da esq (baixo) p/ dir (alto), base reta
+      { const pts=[[-0.5,-0.5],[-0.5,0.15],[0.5,0.5],[0.5,-0.5]]; return clipHalf(pts, side); }
+    case 5: // marcato — base-esq recortada, sobe em diagonal até topo-dir
+      { const pts=[[-0.5,-0.15],[0.5,0.5],[0.5,-0.5]]; return clipHalf(pts, side); }
+    case 6: // sforzando — barra fina diagonal
+      { const pts=[[-0.5,-0.5],[-0.28,-0.5],[0.5,0.5],[0.28,0.5]]; return clipHalf(pts, side); }
+    case 7: // detached-legato (portato) — retângulo com entalhe raso no topo
+      { const pts=[[-0.5,-0.5],[-0.5,0.5],[-0.15,0.5],[0,0.28],[0.15,0.5],[0.5,0.5],[0.5,-0.5]]; return clipHalf(pts, side); }
+    default: // normal — retângulo
+      top=[[-0.5,0.5],[0.5,0.5]]; break;
+  }
+  // monta polígono: topo (esq→dir) + base (dir→esq)
+  const pts=top.concat([[0.5,-0.5],[-0.5,-0.5]]);
+  return clipHalf(pts, side);
+}
+// clipa o polígono na metade pedida (left: x≤0, right: x≥0)
+function clipHalf(pts, side){
+  if(side==='full'||!side) return pts;
+  const keepLeft=(side==='left');
+  const out=[];
+  for(let i=0;i<pts.length;i++){
+    const a=pts[i], b=pts[(i+1)%pts.length];
+    const aIn=keepLeft?a[0]<=0:a[0]>=0;
+    const bIn=keepLeft?b[0]<=0:b[0]>=0;
+    if(aIn)out.push(a);
+    if(aIn!==bIn){ // cruza x=0 → interpola
+      const t=(0-a[0])/(b[0]-a[0]);
+      out.push([0, a[1]+(b[1]-a[1])*t]);
+    }
+  }
+  return out;
+}
+
+// funde notas amarradas por tie: a nota tieStart absorve a duração das
+// seguintes (mesmo pitch/parte) até o tieStop. Mantém uma nota só, mais longa.
+function fundeTies(notes){
+  for(let i=0;i<notes.length;i++){
+    const n=notes[i];
+    if(!n.tieStart||n._consumed)continue;
+    let total=n.durMs, totalB=n.beats, j=i+1, guard=0;
+    while(j<notes.length && guard++<500){
+      const m=notes[j];
+      if(m.part===n.part && m.midi===n.midi && (m.tieStop||m.tieStart)){
+        total+=m.durMs; totalB+=m.beats; m._consumed=true;
+        if(m.tieStop && !m.tieStart) break; // fim da cadeia
+      }
+      j++;
+    }
+    n.durMs=total;
+    n.beats=totalB; // valor rítmico total (soma das amarradas)
+  }
+  // remove as notas consumidas
+  for(let i=notes.length-1;i>=0;i--) if(notes[i]._consumed) notes.splice(i,1);
+}
+
+// ── PARSER (validado) ────────────────────────────────────────
+function parseMusicXML(xmlText){
+  const doc=new DOMParser().parseFromString(xmlText,'application/xml');
+  if(doc.querySelector('parsererror'))throw new Error('XML inválido');
+  // título e autor
+  const title=doc.querySelector('work work-title')?.textContent
+            || doc.querySelector('movement-title')?.textContent || '';
+  let composer='';
+  doc.querySelectorAll('identification creator').forEach(c=>{
+    if(c.getAttribute('type')==='composer' && !composer) composer=c.textContent;
+  });
+  const partNames={},partPan={};
+  doc.querySelectorAll('part-list score-part').forEach(sp=>{
+    const id=sp.getAttribute('id');
+    const nm=sp.querySelector('part-name');partNames[id]=nm?nm.textContent.trim():id;
+    const pe=sp.querySelector('midi-instrument pan');partPan[id]=pe?parseFloat(pe.textContent):null;
+  });
+  const notes=[];let maxMs=0;
+  doc.querySelectorAll('part').forEach(part=>{
+    const pid=part.getAttribute('id'),pname=partNames[pid]||pid,naipe=detectNaipe(pname);
+    let divisions=1,tempo=120,curSat=0.70,transpose=0,cursor=0,lastStart=0;
+    let curWedge=null, curTech=null, curPedal=false, curAgogica=null, pendAgogica=null, curMute=false;
+    part.querySelectorAll('measure').forEach(measure=>{
+      measure.querySelectorAll('attributes').forEach(at=>{
+        const d=at.querySelector('divisions');if(d)divisions=parseInt(d.textContent)||divisions;
+        const tr=at.querySelector('transpose chromatic');if(tr)transpose=parseInt(tr.textContent)||0;
+      });
+      for(const el of measure.children){
+        const tag=el.tagName;
+        if(tag==='direction'){
+          const dyn=el.querySelector('dynamics');
+          if(dyn&&dyn.children.length){const d=dyn.children[0].tagName.toLowerCase();if(DYN_SAT[d]!=null)curSat=DYN_SAT[d];else if(DYN_ATTACK[d]!=null)curSat=DYN_AFTER[d];}
+          // wedge: crescendo/diminuendo gradual
+          const wedge=el.querySelector('wedge');
+          if(wedge){const wt=wedge.getAttribute('type');
+            if(wt==='crescendo')curWedge='cresc';
+            else if(wt==='diminuendo')curWedge='dim';
+            else if(wt==='stop')curWedge=null;
+          }
+          // words: pizz / arco / técnicas em texto
+          const words=el.querySelector('words');
+          if(words&&words.textContent){const w=words.textContent.trim().toLowerCase();
+            if(/pizz/.test(w))curTech='pizz';
+            else if(/arco/.test(w))curTech=null;
+            if(/con sord|sordin|surdina|\bmute\b/.test(w))curMute=true;
+            else if(/senza sord|via sord|open|sem surdina/.test(w))curMute=false;
+            if(/cresc/.test(w))curWedge='cresc';
+            else if(/dim|decresc/.test(w))curWedge='dim';
+            // agógica textual: accelerando / ritardando
+            if(/accel/.test(w))pendAgogica='accel';
+            else if(/ritard|rallent|rall\.|riten/.test(w))pendAgogica='rit';
+          }
+          // dashes: delimitam a extensão da agógica (start → stop)
+          const dsh=el.querySelector('dashes');
+          if(dsh){const dt=dsh.getAttribute('type');
+            if(dt==='start'&&pendAgogica){curAgogica=pendAgogica;pendAgogica=null;}
+            else if(dt==='stop')curAgogica=null;
+          }
+          // pedal (piano): start/stop → estado vigente
+          const ped=el.querySelector('pedal');
+          if(ped){const pt=ped.getAttribute('type');if(pt==='start')curPedal=true;else if(pt==='stop')curPedal=false;}
+          const s=el.querySelector('sound[tempo]');if(s)tempo=parseFloat(s.getAttribute('tempo'))||tempo;continue;
+        }
+        if(tag==='sound'){if(el.hasAttribute('tempo'))tempo=parseFloat(el.getAttribute('tempo'))||tempo;continue;}
+        if(tag==='backup'){const d=el.querySelector('duration');cursor-=((d?parseInt(d.textContent):0)/divisions)*(60000/tempo);if(cursor<0)cursor=0;continue;}
+        if(tag==='forward'){const d=el.querySelector('duration');cursor+=((d?parseInt(d.textContent):0)/divisions)*(60000/tempo);continue;}
+        if(tag!=='note')continue;
+        // cue notes: notas de referência que NÃO soam — avança o tempo mas não desenha
+        if(el.querySelector('cue')){
+          const isChordCue=!!el.querySelector('chord');
+          if(!isChordCue){const cd=el.querySelector('duration');cursor+=((cd?parseInt(cd.textContent):0)/divisions)*(60000/tempo);}
+          continue;
+        }
+        const isChord=!!el.querySelector('chord'),isRest=!!el.querySelector('rest');
+        const isGrace=!!el.querySelector('grace');
+        const unpitched=el.querySelector('unpitched');
+        const dEl=el.querySelector('duration'),ticks=dEl?parseInt(dEl.textContent):0;
+        const durMs=(ticks/divisions)*(60000/tempo),beats=ticks/divisions;
+        const voice=el.querySelector('voice')?el.querySelector('voice').textContent:'1';
+        const startMs=isChord?lastStart:cursor;
+        // stem: up (padrão) ou down (inverte forma na vertical)
+        const stemEl=el.querySelector('stem');
+        const stemDown=stemEl?stemEl.textContent==='down':false;
+        // fermata: nota suspensa
+        const hasFermata=!!el.querySelector('notations fermata');
+        // tie: start/stop (prolonga)
+        const tieEls=el.querySelectorAll('tie');
+        let tieStart=false,tieStop=false;
+        tieEls.forEach(t=>{const ty=t.getAttribute('type');if(ty==='start')tieStart=true;if(ty==='stop')tieStop=true;});
+
+        if(!isRest){
+          let midi, realOct, color;
+          if(unpitched){
+            // percussão: sem altura → oitava central (C4=60), cor cinza-neutra
+            midi=60; realOct=4;
+            color=hsbToRgb(0,0,0.55); // acromático
+          } else {
+            const st=el.querySelector('pitch step')?.textContent||'C';
+            const oc=parseInt(el.querySelector('pitch octave')?.textContent||'4');
+            const al=parseInt(el.querySelector('pitch alter')?.textContent||'0');
+            midi=(oc+1)*12+STEP_SEMI[st]+al+transpose;
+            realOct=Math.floor(midi/12)-1;
+            color=hsbToRgb(alterHueShift(STEP_HUE[st],al),curSat,octaveBright(realOct));
+            var _alter=al;
+          }
+          const arts=[];
+          el.querySelectorAll('notations articulations > *').forEach(a=>{
+            const t=a.tagName.toLowerCase();
+            if(t==='staccatissimo')arts.push(1);else if(t==='staccato')arts.push(2);
+            else if(t==='tenuto')arts.push(3);else if(t==='accent')arts.push(4);
+            else if(t==='strong-accent')arts.push(5);
+            else if(t==='detached-legato')arts.push(7);
+          });
+          const hasTremolo=!!el.querySelector('notations ornaments tremolo');
+          const tremoloMarks=parseInt((el.querySelector('notations ornaments tremolo')||{}).textContent)||3;
+          const hasTrill=!!el.querySelector('notations ornaments trill-mark');
+          const hasTurn=!!el.querySelector('notations ornaments turn, notations ornaments delayed-turn');
+          const hasMordent=!!el.querySelector('notations ornaments inverted-mordent, notations ornaments mordent');
+          const hasArpeggio=!!el.querySelector('notations arpeggiate');
+          const glissEl=el.querySelector('notations glissando, notations slide');
+          const hasGliss=!!glissEl;
+          const hasHarmonic=!!el.querySelector('notations technical harmonic');
+          notes.push({midi,startMs,durMs,beats,voice,isChord,naipe,part:pname,pan:partPan[pid],color,
+            art1:arts[0]||0, art2:arts[1]||arts[0]||0,
+            stemDown, isGrace, hasFermata, tieStart, tieStop, unpitched:!!unpitched, alter:(unpitched?0:_alter),
+            satVal:curSat, wedge:curWedge, tech:curTech, hasTremolo, tremoloMarks, hasTrill, hasTurn, hasMordent,
+            pedal:curPedal, arpeggio:hasArpeggio, gliss:hasGliss, agogica:curAgogica,
+            harmonic:hasHarmonic, mute:curMute});
+        }
+        if(!isChord&&!isGrace){lastStart=startMs;cursor=startMs+durMs;}
+        if(startMs+durMs>maxMs)maxMs=startMs+durMs;
+      }
+    });
+  });
+  // ── TIE: somar duração visual das notas amarradas ──
+  // nota com tieStart soma a duração da(s) seguinte(s) com tieStop de mesmo pitch/parte
+  fundeTies(notes);
+  notes.sort((a,b)=>a.startMs-b.startMs);
+  marcaWedges(notes);
+  aplicaAgogica(notes);
+  return{notes,totalMs:maxMs,title,composer};
+}
+
+// marca a posição (0→1) de cada nota dentro de sua sequência de crescendo/diminuendo.
+// agrupa por parte; sequências contínuas de mesmo wedge recebem posição crescente.
+// Agógica gradual: dentro de uma região de accel/rit, reespaça as notas —
+// accelerando aproxima progressivamente (intervalos encolhem), ritardando afasta.
+// Só desloca DENTRO da região (a duração total da região é preservada), para
+// não desalinhar o resto da obra.
+function aplicaAgogica(notes){
+  const byPart={};
+  for(const n of notes){(byPart[n.part]=byPart[n.part]||[]).push(n);}
+  for(const arr of Object.values(byPart)){
+    arr.sort((a,b)=>a.startMs-b.startMs);
+    let i=0;
+    while(i<arr.length){
+      const g=arr[i].agogica;
+      if(!g){i++;continue;}
+      let j=i; while(j<arr.length && arr[j].agogica===g) j++;
+      if(j-i>=2){
+        const t0=arr[i].startMs, t1=arr[j-1].startMs, span=t1-t0;
+        if(span>0){
+          // curva: accel = ease-in (fica mais rápido → posições empurradas p/ o fim);
+          // rit = ease-out (fica mais lento → posições puxadas p/ o início)
+          for(let k=i;k<j;k++){
+            const p=(arr[k].startMs-t0)/span; // 0..1 linear
+            let np;
+            // accel: intervalos diminuem ao avançar → pontos empurrados p/ o fim (ease-out)
+            if(g==='accel') np=1-(1-p)*(1-p);
+            // rit: intervalos aumentam ao avançar → pontos puxados p/ o início (ease-in)
+            else np=p*p;
+            arr[k].startMs = t0 + np*span;
+            arr[k].globalEnd = arr[k].startMs + arr[k].durMs;
+          }
+        }
+      }
+      i=j;
+    }
+  }
+}
+
+function marcaWedges(notes){
+  const byPart={};
+  for(const n of notes){(byPart[n.part]=byPart[n.part]||[]).push(n);}
+  for(const arr of Object.values(byPart)){
+    arr.sort((a,b)=>a.startMs-b.startMs);
+    let i=0;
+    while(i<arr.length){
+      const w=arr[i].wedge;
+      if(!w){i++;continue;}
+      let j=i; while(j<arr.length && arr[j].wedge===w) j++;
+      const len=j-i;
+      for(let k=i;k<j;k++){
+        arr[k].wedgePos = len>1 ? (k-i)/(len-1) : 1; // 0 no início da rampa, 1 no fim
+      }
+      i=j;
+    }
+  }
+}
+
+// ── Estado ───────────────────────────────────────────────────
+let allNotes=[],totalMs=0,loaded=false,playheadMs=0,isPlaying=false,lastMilli=0;
+let instruments=[]; // lista ordenada por pan {part, pan, xNorm}
+let pMin=127,pMax=0;
+let melOpacity=1.0, harmOpacity=1.0;
+let onlyActive=false;
+let naipeOp={}; // opacidade por naipe (0..1)
+
+// melodia = voz 1; harmonia = resto. multiplicado pela opacidade do naipe
+function noteOpacity(n){
+  const nOp = (n.naipe in naipeOp)?naipeOp[n.naipe]:1.0;
+  const vOp = (n.voice==='1')?melOpacity:harmOpacity;
+  return nOp*vOp;
+}
+
+function buildInstruments(){
+  const map={};
+  for(const n of allNotes){
+    if(!(n.part in map)) map[n.part]=panFor(n.part,n.pan);
+    if(n.midi<pMin)pMin=n.midi; if(n.midi>pMax)pMax=n.midi;
+  }
+  // ordena por pan e espalha do 0 preenchendo o espaço [-1..+1]
+  instruments=Object.entries(map).map(([part,pan])=>({part,pan})).sort((a,b)=>a.pan-b.pan);
+  const N=instruments.length;
+  instruments.forEach((ins,i)=>{
+    ins.idx=i;
+    ins.xNorm = N>1 ? (i/(N-1))*2-1 : 0; // -1 (esq) .. +1 (dir), preenche o espaço
+  });
+  // mapa rápido part → xNorm
+  const xmap={}; instruments.forEach(ins=>xmap[ins.part]=ins.xNorm);
+  for(const n of allNotes) n.xNorm=xmap[n.part];
+}
+function notesAt(t){const o=[];for(const n of allNotes){if(n.startMs<=t&&n.startMs+n.durMs>t&&noteOpacity(n)>0)o.push(n);if(n.startMs>t)break;}return o;}
+
+// ── Upload ───────────────────────────────────────────────────
+const uploadScreen=document.getElementById('upload-screen'),app=document.getElementById('app'),statusEl=document.getElementById('status'),fileInput=document.getElementById('file-input');
+function handleFile(file){
+  if(!file)return;statusEl.textContent='lendo '+file.name+'...';
+  if(/\.mxl$/i.test(file.name)){
+    file.arrayBuffer().then(b=>JSZip.loadAsync(b)).then(zip=>zip.file('META-INF/container.xml').async('string').then(c=>{const m=c.match(/full-path="([^"]+)"/);return zip.file(m?m[1]:Object.keys(zip.files).find(f=>/\.xml$/i.test(f)&&!/container/i.test(f))).async('string');})).then(x=>finish(x,file.name)).catch(e=>statusEl.textContent='erro: '+e.message);
+  } else file.text().then(x=>finish(x,file.name)).catch(e=>statusEl.textContent='erro: '+e.message);
+}
+function finish(xml,name){
+  try{
+    const {notes,totalMs:tm,title,composer}=parseMusicXML(xml);
+    allNotes=notes;totalMs=tm;pMin=127;pMax=0;buildInstruments();loaded=true;
+    playheadMs=0; schedIdx=0;
+    document.getElementById('h-title').textContent=title||name.replace(/\.(xml|musicxml|mxl)$/i,'');
+    document.getElementById('h-author').textContent=composer||'';
+    uploadScreen.style.display='none';app.style.display='block';
+    if(typeof hideEndScreen==='function')hideEndScreen();
+    buildFilters();initAudio();
+    if(!window._sketchesReady){ initRing();initSlice();initNotes(); window._sketchesReady=true; }
+    setPlayhead(0);
+    updateWorkNav();
+    statusEl.textContent=notes.length+' notas';
+  }catch(e){statusEl.textContent='erro: '+e.message;console.error(e);}
+}
+fileInput.addEventListener('change',e=>handleFile(e.target.files[0]));
+// botão "nova obra" no player — troca a música a qualquer momento
+const fileInput2=document.getElementById('file-input-2');
+const btnNew=document.getElementById('btn-newwork');
+if(btnNew){
+  btnNew.addEventListener('click',()=>fileInput2.click());
+  fileInput2.addEventListener('change',e=>{ if(e.target.files[0]){ isPlaying=false; document.getElementById('btn-play').textContent='▶'; handleFile(e.target.files[0]); } });
+}
+// ── as 5 obras (urls a vincular quando os .mxl chegarem) ──
+const WORKS=[
+  {title:'Obra 1', url:null},
+  {title:'Obra 2', url:null},
+  {title:'Obra 3', url:null},
+  {title:'Obra 4', url:null},
+  {title:'Obra 5', url:null},
+];
+let curWork=0;
+const navPrev=document.getElementById('nav-prev'), navNext=document.getElementById('nav-next'), worknumEl=document.getElementById('worknum');
+function updateWorkNav(){
+  worknumEl.textContent=(curWork+1)+' / '+WORKS.length;
+  navPrev.style.display = curWork>0 ? 'flex' : 'none';
+  navNext.style.display = curWork<WORKS.length-1 ? 'flex' : 'none';
+}
+function loadWork(i){
+  curWork=Math.max(0,Math.min(WORKS.length-1,i));
+  updateWorkNav();
+  const w=WORKS[curWork];
+  if(w.url){
+    statusEl.textContent='carregando '+w.title+'...';
+    fetch(w.url).then(r=>r.blob()).then(b=>handleFile(new File([b], w.url.split('/').pop()))).catch(e=>statusEl.textContent='erro: '+e.message);
+  } else {
+    // obra ainda não vinculada — por enquanto abre o seletor de arquivo
+    fileInput.click();
+  }
+}
+navPrev.addEventListener('click',()=>loadWork(curWork-1));
+navNext.addEventListener('click',()=>loadWork(curWork+1));
+const btnStart=document.getElementById('btn-start');
+if(btnStart)btnStart.addEventListener('click',()=>loadWork(0));
+// botão recomeçar — volta ao início e toca
+const btnRestart=document.getElementById('btn-restart');
+if(btnRestart){
+  btnRestart.addEventListener('click',()=>{
+    hideEndScreen();
+    setPlayhead(0);
+    isPlaying=true; lastMilli=performance.now();
+    document.getElementById('btn-play').textContent='⏸';
+    if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+  });
+}
+// ── Scrub ────────────────────────────────────────────────────
+const scrub=document.getElementById('scrub'),scrubFill=document.getElementById('scrub-fill'),scrubKnob=document.getElementById('scrub-knob'),scrubTime=document.getElementById('scrub-time'),btnPlay=document.getElementById('btn-play');
+let scrubbing=false;
+function setPlayhead(ms){
+  const prev=playheadMs;
+  playheadMs=Math.max(0,Math.min(totalMs,ms));
+  // salto para trás (ou grande salto): recalcula índice de áudio e limpa agendamentos
+  if(playheadMs < prev-30){
+    schedIdx=0;
+    while(schedIdx<allNotes.length && allNotes[schedIdx].startMs<playheadMs) schedIdx++;
+    for(const n of allNotes) n._scheduled=false;
+  }
+  const p=totalMs?playheadMs/totalMs*100:0;
+  scrubFill.style.width=p+'%';scrubKnob.style.left=p+'%';
+  scrubTime.textContent=fmtTime(playheadMs)+' / '+fmtTime(totalMs);
+}
+scrub.addEventListener('mousedown',e=>{scrubbing=true;sm(e);});
+document.addEventListener('mousemove',e=>{if(scrubbing)sm(e);});
+document.addEventListener('mouseup',()=>scrubbing=false);
+function sm(e){const r=scrub.getBoundingClientRect();setPlayhead(((e.clientX-r.left)/r.width)*totalMs);}
+btnPlay.addEventListener('click',()=>{if(typeof hideEndScreen==='function')hideEndScreen();isPlaying=!isPlaying;btnPlay.textContent=isPlaying?'⏸':'▶';if(isPlaying){lastMilli=performance.now();if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();schedIdx=0;}});
+setInterval(()=>{if(isPlaying&&loaded){const now=performance.now();setPlayhead(playheadMs+(now-lastMilli));lastMilli=now;scheduleAudio();if(playheadMs>=totalMs){isPlaying=false;btnPlay.textContent='▶';showEndScreen();}}},16);
+
+// ── Tela de fim (dois boxes: nova obra / rescutar) ──
+function showEndScreen(){
+  let el=document.getElementById('end-screen');
+  if(!el){
+    el=document.createElement('div');el.id='end-screen';
+    el.style.cssText='position:absolute;left:0;top:64px;width:56%;height:calc(100% - 64px - 44px - 14px);display:flex;align-items:center;justify-content:center;gap:24px;background:rgba(255,255,255,0.92);z-index:20;';
+    const mk=(txt,sub,fn)=>{
+      const b=document.createElement('div');
+      b.style.cssText='width:200px;height:150px;border:1px solid #bbb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:border-color .2s;';
+      b.onmouseover=()=>b.style.borderColor='#777'; b.onmouseout=()=>b.style.borderColor='#bbb';
+      b.innerHTML=`<div style="font-size:26px;color:#bbb;">${sub}</div><div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#777;">${txt}</div>`;
+      b.addEventListener('click',fn);
+      return b;
+    };
+    el.appendChild(mk('escutar de novo','↺',()=>{hideEndScreen();setPlayhead(0);isPlaying=true;lastMilli=performance.now();document.getElementById('btn-play').textContent='⏸';if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();}));
+    el.appendChild(mk('outra obra','♪',()=>{hideEndScreen();fileInput2.click();}));
+    document.getElementById('app').appendChild(el);
+  }
+  el.style.display='flex';
+}
+function hideEndScreen(){const el=document.getElementById('end-screen');if(el)el.style.display='none';}
+// barra de cores: mostra as cores das notas tocando no instante (roda sempre)
+let _colorBarEl=null;
+setInterval(()=>{
+  if(!loaded)return;
+  if(!_colorBarEl)_colorBarEl=document.getElementById('color-bar');
+  const active=notesAt(playheadMs);
+  if(!active.length){_colorBarEl.innerHTML='';return;}
+  // ordena por pitch e monta faixas proporcionais
+  active.sort((a,b)=>a.midi-b.midi);
+  let html='';
+  for(const n of active){
+    const [r,g,b]=n.color;
+    const op=noteOpacity(n);
+    html+=`<div style="flex:1;background:rgba(${r|0},${g|0},${b|0},${op.toFixed(2)});"></div>`;
+  }
+  _colorBarEl.innerHTML=html;
+},80);
+
+// ══════════════════════════════════════════════════════════════
+//  PAINEL FATIA — X=instrumento (pan), Y=pitch/oitava
+//  Cada instrumento é uma coluna; a nota tocando acende na sua
+//  altura (pitch). Fundo = faixas de oitava (espectro cromático).
+// ══════════════════════════════════════════════════════════════
+// ── ÁUDIO sintético (Web Audio) ──────────────────────────────
+let audioCtx=null, masterGain=null, scheduledUntil=0, schedIdx=0;
+function initAudio(){
+  if(!audioCtx){
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    masterGain=audioCtx.createGain();
+    masterGain.gain.value=0.18;
+    masterGain.connect(audioCtx.destination);
+  }
+}
+function midiToFreq(m){return 440*Math.pow(2,(m-69)/12);}
+function playNote(n, whenSec){
+  if(!audioCtx)return;
+  const osc=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  osc.type='triangle'; // timbre eletrônico simples
+  osc.frequency.value=midiToFreq(n.midi);
+  const dur=Math.min(2.5, Math.max(0.08, n.durMs/1000));
+  const vol=0.10+(n.color?0.05:0); // leve
+  g.gain.setValueAtTime(0, whenSec);
+  g.gain.linearRampToValueAtTime(vol, whenSec+0.01);
+  g.gain.exponentialRampToValueAtTime(0.001, whenSec+dur);
+  osc.connect(g);g.connect(masterGain);
+  osc.start(whenSec);osc.stop(whenSec+dur+0.05);
+}
+// agenda notas próximas ao playhead enquanto toca
+function scheduleAudio(){
+  if(!audioCtx||!isPlaying)return;
+  const lookahead=0.3; // s
+  const nowMs=playheadMs;
+  const horizonMs=nowMs+lookahead*1000;
+  // avança índice até o playhead
+  while(schedIdx<allNotes.length && allNotes[schedIdx].startMs<nowMs-50) schedIdx++;
+  let i=schedIdx;
+  while(i<allNotes.length && allNotes[i].startMs<horizonMs){
+    const n=allNotes[i];
+    if(n.startMs>=nowMs-20 && noteOpacity(n)>0 && !n._scheduled){
+      const delaySec=Math.max(0,(n.startMs-nowMs)/1000);
+      playNote(n, audioCtx.currentTime+delaySec);
+      n._scheduled=true;
+      setTimeout(()=>{n._scheduled=false;}, 400);
+    }
+    i++;
+  }
+}
+
+function buildFilters(){
+  const mix=document.getElementById('mixer');mix.innerHTML='';
+  mix.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;width:100%;align-content:center;justify-items:center;';
+  const mkItem=(label,init,onCh)=>{
+    const wrap=document.createElement('div');wrap.style.cssText='display:flex;align-items:center;gap:8px;background:#e6e6e6;border-radius:20px;padding:7px 18px;';
+    const pill=document.createElement('div');pill.textContent=label;
+    pill.style.cssText='color:#555;font-family:inherit;font-size:12px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;min-width:64px;text-align:left;';
+    const tr=document.createElement('div');tr.style.cssText='width:80px;height:9px;background:#ccc;position:relative;cursor:pointer;border-radius:5px;';
+    const fill=document.createElement('div');fill.style.cssText='position:absolute;top:0;left:0;height:100%;background:#333;border-radius:5px;';fill.style.width=(init*100)+'%';
+    const kn=document.createElement('div');kn.style.cssText='position:absolute;top:50%;width:15px;height:15px;border-radius:50%;background:#333;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 0 2px #e6e6e6;';kn.style.left=(init*100)+'%';
+    tr.appendChild(fill);tr.appendChild(kn);wrap.appendChild(pill);wrap.appendChild(tr);
+    let dg=false;const upd=e=>{const r=tr.getBoundingClientRect();let v=(e.clientX-r.left)/r.width;v=Math.max(0,Math.min(1,v));fill.style.width=(v*100)+'%';kn.style.left=(v*100)+'%';onCh(v);};
+    tr.addEventListener('mousedown',e=>{dg=true;upd(e);e.preventDefault();});
+    document.addEventListener('mousemove',e=>{if(dg)upd(e);});
+    document.addEventListener('mouseup',()=>dg=false);
+    return wrap;
+  };
+  // toggle on/off — mesmo visual dos botões seguir/soando
+  const mkToggle=(label,initOn,onCh)=>{
+    const b=document.createElement('button');
+    b.className='toggle'+(initOn?' on':'');
+    b.innerHTML='<span class="led"></span>'+label;
+    let on=initOn;
+    b.addEventListener('click',()=>{on=!on;b.classList.toggle('on',on);onCh(on);});
+    return b;
+  };
+  const ORDEM=['cordas','madeiras','metais','percussão','piano','harpa','outros'];
+  const presentes=[...new Set(allNotes.map(n=>n.naipe))];
+  const naipes=ORDEM.filter(n=>presentes.includes(n));
+  naipes.forEach(np=>{naipeOp[np]=1.0; mix.appendChild(mkItem(np,1.0,v=>naipeOp[np]=v));});
+  mix.appendChild(mkToggle('melodia',true,on=>{melOpacity=on?1.0:0;}));
+  mix.appendChild(mkToggle('harmonia',true,on=>{harmOpacity=on?1.0:0;}));
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PAINEL NOTAS — só as notas tocando, grandes, mostrando articulação
+// ══════════════════════════════════════════════════════════════
+// Desenha a forma 2D correta de uma nota (usada em FATIA e NOTAS).
+// p=sketch, cx/cy=centro, sz=tamanho base (quadrado da semínima), n=nota, alpha
+function drawNote2D(p, cx, cy, sz, n, alpha){
+  const [r,g,b]=n.color; p.noStroke(); p.fill(r,g,b,alpha);
+  // crescendo: normal → um pouco maior · diminuendo: normal → menor (centralizado)
+  if(n.wedge==='cresc' && n.wedgePos!=null) sz *= 1.0 + n.wedgePos*0.4;   // 1.0 → 1.4
+  else if(n.wedge==='dim' && n.wedgePos!=null) sz *= 1.0 - n.wedgePos*0.6; // 1.0 → 0.4
+  let h=sz, w=sz;
+  if(n.isGrace){ h=sz*0.5; w=sz*0.5; }
+  const sy=(n.stemDown||n.alter)?-1:1;
+  if(n.mute){
+    // surdina → nota girada 45° (losango)
+    p.push();p.translate(cx,cy);p.rotate(Math.PI/4);
+    p.rectMode(p.CENTER);p.rect(0,0,w*0.72,h*0.72);
+    p.pop();
+    return;
+  }
+  if(n.harmonic){
+    // harmônico → só a faixa superior preenchida, com corte diagonal descendo
+    p.beginShape();
+    p.vertex(cx-w/2, cy-h/2);          // topo esq
+    p.vertex(cx+w/2, cy-h/2);          // topo dir
+    p.vertex(cx+w/2, cy);              // desce à direita (meio)
+    p.vertex(cx-w/2, cy-h*0.18);       // sobe à esquerda (corte diagonal)
+    p.endShape(p.CLOSE);
+    return;
+  }
+  if(n.gliss){
+    // glissando → lâmina/cunha fina e inclinada, subindo à direita (inverte se desce)
+    const dir=(n.glissDown)?-1:1;
+    p.beginShape();
+    p.vertex(cx-w/2, cy+h/2*dir);        // base esq (canto de baixo)
+    p.vertex(cx-w/2+w*0.22, cy+h/2*dir); // base curta
+    p.vertex(cx+w/2, cy-h/2*dir);        // ponta afiada (topo dir)
+    p.endShape(p.CLOSE);
+  } else if(n.tech==='pizz'){
+    // pizzicato → triângulo (pirâmide): base embaixo, ponta em cima
+    p.beginShape();
+    p.vertex(cx, cy-h/2*sy);        // ponta (topo)
+    p.vertex(cx+w/2, cy+h/2*sy);    // base direita
+    p.vertex(cx-w/2, cy+h/2*sy);    // base esquerda
+    p.endShape(p.CLOSE);
+  } else if(n.hasTremolo){
+    // tremolo → xadrez de quadradinhos dentro do quadrado da semínima
+    const div=Math.max(2,Math.min(5,(n.tremoloMarks||3)+1)); // 2..5 subdivisões
+    const cell=w/div;
+    p.rectMode(p.CORNER);
+    for(let ix=0;ix<div;ix++)for(let iy=0;iy<div;iy++){
+      if((ix+iy)%2===0){ // padrão xadrez: só as células "pares"
+        p.rect(cx-w/2+ix*cell, cy-h/2+iy*cell, cell*0.92, cell*0.92);
+      }
+    }
+  } else if(n.hasTrill){
+    // trinado → quadradinhos alternados cima/baixo
+    const nb=4, seg=w/nb;
+    for(let k=0;k<nb;k++){
+      const px=cx-w/2+(k+0.5)*seg, up=(k%2===0)?-h*0.2:h*0.2;
+      p.rectMode(p.CENTER);p.rect(px,cy+up,seg*0.8,h*0.5);
+    }
+  } else if(n.hasTurn || n.hasMordent){
+    // grupeto → giro princ→sup→princ→inf · mordente → giro curto princ→inf→princ
+    const pattern = n.hasMordent ? [0,-1,0] : [0,1,0,-1];
+    const nf=pattern.length, seg=w/nf;
+    p.rectMode(p.CORNER);
+    for(let k=0;k<nf;k++){
+      const px=cx-w/2+k*seg;
+      const off=pattern[k]*(h*0.30)*sy;
+      p.rect(px, cy-h/2+off, seg*0.9, h);
+    }
+  } else if(n.pedal){
+    // pedal → corte HORIZONTAL: metade de cima normal, metade de baixo saturação menor
+    p.rectMode(p.CORNER);
+    p.rect(cx-w/2, cy-h/2, w, h/2);                 // metade cima (cor cheia)
+    p.fill(r,g,b,alpha*0.85);                        // metade baixo dessaturada
+    p.rect(cx-w/2, cy, w, h/2);
+    p.fill(r,g,b,alpha);
+  } else if(n.arpeggio){
+    // arpejo → forma de V: dois blocos verticais com vale no centro
+    p.beginShape();
+    p.vertex(cx-w/2, cy-h/2);   // topo esq
+    p.vertex(cx-w/6, cy-h/2);   // topo do braço esq
+    p.vertex(cx, cy+h*0.15);    // fundo do vale (centro)
+    p.vertex(cx+w/6, cy-h/2);   // topo do braço dir
+    p.vertex(cx+w/2, cy-h/2);   // topo dir
+    p.vertex(cx+w/2, cy+h/2);   // base dir
+    p.vertex(cx-w/2, cy+h/2);   // base esq
+    p.endShape(p.CLOSE);
+  } else if(n.art1 || n.art2){
+    // articulação: polígono (metade+metade)
+    const drawHalf=(art,side)=>{const poly=artPolygon(art,side);if(!poly.length)return;p.beginShape();for(const[px,py]of poly)p.vertex(cx+px*w,cy-py*h*sy);p.endShape(p.CLOSE);};
+    // caso especial: staccato + acento → entalhe em V no topo (print v2)
+    const isVnotch=(n.art1===2&&n.art2===4)||(n.art1===4&&n.art2===2);
+    if(isVnotch){
+      p.beginShape();
+      const V=[[-0.5,0.5],[-0.5,-0.5],[0.5,-0.5],[0.5,0.5],[0,0.05]]; // topo: canto,base,base,canto, e desce ao centro
+      for(const[px,py]of V)p.vertex(cx+px*w,cy-py*h*sy);
+      p.endShape(p.CLOSE);
+    } else if(n.art1===n.art2)drawHalf(n.art1,'full');else{drawHalf(n.art1,'left');drawHalf(n.art2,'right');}
+  } else {
+    // normal — quadrado
+    p.rectMode(p.CENTER);p.rect(cx,cy,w,h);
+  }
+  // fermata: retângulo de continuação ao lado (altura normal da nota)
+  if(n.hasFermata){
+    p.fill(r,g,b,alpha*0.55);p.rectMode(p.CENTER);
+    p.rect(cx+w*0.8,cy,w*0.5,h);
+  }
+}
+function poly2D(p,cx,cy,rad,n,rot){
+  p.beginShape();
+  for(let i=0;i<n;i++){const a=rot+i/n*Math.PI*2;p.vertex(cx+Math.cos(a)*rad,cy+Math.sin(a)*rad);}
+  p.endShape(p.CLOSE);
+}
+
+function initNotes(){
+  new p5(function(p){
+    let cw,ch;
+    p.setup=function(){const el=document.getElementById('p-notes');cw=el.clientWidth;ch=el.clientHeight;const c=p.createCanvas(cw,ch);c.parent('p-notes');p.pixelDensity(2);p.textFont('Geist Mono');};
+    p.windowResized=function(){const el=document.getElementById('p-notes');cw=el.clientWidth;ch=el.clientHeight;p.resizeCanvas(cw,ch);};
+    // forma da articulação em 2D — polígonos exatos, metade art1 + metade art2
+    function artShape(cx,cy,w,h,a1,a2,col,alpha,stemDown){
+      const [r,g,b]=col; p.noStroke(); p.fill(r,g,b,alpha);
+      const sy=stemDown?-1:1; // stem down inverte na vertical
+      const drawHalf=(art,side)=>{
+        const poly=artPolygon(art,side);
+        if(!poly.length)return;
+        p.beginShape();
+        for(const [px,py] of poly) p.vertex(cx+px*w, cy-py*h*sy);
+        p.endShape(p.CLOSE);
+      };
+      if(a1===a2){ drawHalf(a1,'full'); }
+      else { drawHalf(a1,'left'); drawHalf(a2,'right'); }
+    }
+    p.draw=function(){
+      p.clear();
+      const active=notesAt(playheadMs);
+      if(!active.length){p.noStroke();p.fill(180);p.textSize(9);p.textAlign(p.CENTER,p.CENTER);p.text('—',cw/2,ch/2);return;}
+      active.sort((a,b)=>a.midi-b.midi);
+      const N=active.length;
+      const cols=Math.max(1,Math.ceil(Math.sqrt(N*cw/ch)));
+      const rows=Math.ceil(N/cols);
+      const pad=8, cellW=(cw-pad*2)/cols, cellH=(ch-pad*2)/rows;
+      const sz=Math.min(cellW,cellH,30); // teto menor para caber mais notas
+      active.forEach((n,i)=>{
+        const cx=pad+(i%cols)*cellW+cellW/2;
+        const cy=pad+Math.floor(i/cols)*cellH+cellH/2;
+        drawNote2D(p, cx, cy, sz*0.62, n, 255*noteOpacity(n));
+        p.noStroke();p.fill(150);p.textSize(6);p.textAlign(p.CENTER,p.TOP);
+        p.text(noteName(n.midi),cx,cy+sz*0.42);
+      });
+    };
+  });
+}
+
+function initSlice(){
+  new p5(function(p){
+    let cw,ch;
+    p.setup=function(){const el=document.getElementById('p-slice');cw=el.clientWidth;ch=el.clientHeight;const c=p.createCanvas(cw,ch);c.parent('p-slice');p.pixelDensity(2);p.textFont('Geist Mono');};
+    p.windowResized=function(){const el=document.getElementById('p-slice');cw=el.clientWidth;ch=el.clientHeight;p.resizeCanvas(cw,ch);};
+    p.draw=function(){
+      p.clear();
+      const padT=38,padB=6,padL=30,padR=16;
+      const innerH=ch-padT-padB, innerW=cw-padL-padR;
+      const pRange=Math.max(1,pMax-pMin);
+      // escala vertical: garante espaçamento amplo entre oitavas
+      const octMinN=Math.floor(pMin/12)-1, octMaxN=Math.floor(pMax/12)-1;
+      const yFor=midi=>padT+innerH-((midi-pMin)/pRange)*innerH;
+      p.textAlign(p.LEFT,p.CENTER);
+      for(let oct=octMinN;oct<=octMaxN;oct++){
+        const midi=(oct+1)*12;
+        if(midi<pMin||midi>pMax)continue;
+        const yy=yFor(midi);
+        p.stroke(215);p.strokeWeight(0.6);p.line(padL,yy,cw-padR,yy);
+        p.noStroke();p.fill(140);p.textSize(8);p.text('C'+oct,4,yy);
+      }
+      // nomes dos instrumentos no topo, girados
+      const N=instruments.length;
+      instruments.forEach(ins=>{
+        const naipe=detectNaipe(ins.part);
+        if((naipe in naipeOp) && naipeOp[naipe]<=0)return;
+        const xx=padL+((ins.xNorm+1)/2)*innerW;
+        p.push();
+        p.translate(xx,padT-6);p.rotate(-Math.PI/4);
+        p.noStroke();p.fill(150);p.textSize(8);p.textAlign(p.RIGHT,p.CENTER);
+        p.text(ins.part.slice(0,16),0,0);
+        p.pop();
+      });
+      // notas tocando no instante
+      const active=notesAt(playheadMs);
+      const cellW=N>1?innerW/N:innerW*0.5;
+      for(const n of active){
+        const xx=padL+((n.xNorm+1)/2)*innerW;
+        const yy=padT+innerH-((n.midi-pMin)/pRange)*innerH;
+        const sz=Math.min(cellW*0.8,14);
+        drawNote2D(p, xx, yy, sz, n, 255*noteOpacity(n));
+      }
+    };
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PAINEL ANEL — a obra inteira enrolada num anel 3D
+//  Ângulo = tempo · raio = X do instrumento (pan) · Y = pitch
+// ══════════════════════════════════════════════════════════════
+function initRing(){
+  new p5(function(p){
+    let cw,ch,rotX=0.5,rotA=0,zoom=1.0,drag=false,lmx=0,lmy=0;
+    let R0,RW,PITCH_H;
+    let camMode='persp', follow=false, followZoom=2.4, inside=false, insideTilt=0;
+    // presets de vista
+    const VIEWS={persp:{rx:0.5,ry:0},top:{rx:Math.PI/2,ry:0},side:{rx:0,ry:Math.PI/2},right:{rx:0,ry:-Math.PI/2},front:{rx:0,ry:0}};
+    function setView(m){
+      if(m==='follow'){follow=!follow;updateCamBtns();return;}
+      if(m==='persp'){ inside=!inside; camMode='persp'; follow=inside?follow:false; updateCamBtns(); return; } // 3D = alterna visão interna (centro da forma)
+      camMode=m;follow=false;inside=false;
+      rotX=VIEWS[m].rx;rotA=VIEWS[m].ry;
+      updateCamBtns();
+    }
+    function updateCamBtns(){
+      document.querySelectorAll('.cam-b, .toggle[data-cam]').forEach(b=>{
+        const c=b.dataset.cam; if(!c)return;
+        if(c==='follow') b.classList.toggle('on',follow);
+        else if(c==='persp') b.classList.toggle('on',inside);
+        else b.classList.toggle('on', c===camMode&&!inside&&!follow);
+      });
+    }
+    // ligar botões
+    setTimeout(()=>{document.querySelectorAll('.cam-b').forEach(b=>{if(b.dataset.cam)b.addEventListener('click',()=>setView(b.dataset.cam));});
+      const fb=document.querySelector('.toggle[data-cam="follow"]');
+      if(fb)fb.addEventListener('click',()=>setView('follow'));
+      updateCamBtns();
+      const oa=document.getElementById('btn-onlyactive');
+      if(oa)oa.addEventListener('click',()=>{onlyActive=!onlyActive;oa.classList.toggle('on',onlyActive);});
+    },50);
+    function layout(){R0=Math.min(cw,ch)*0.42;RW=Math.min(cw,ch)*0.14;PITCH_H=Math.min(cw,ch)*0.55;}
+    // octaedro leve (6 vértices, 8 faces triangulares)
+    function drawOcta(s){
+      const v=[[s,0,0],[-s,0,0],[0,s,0],[0,-s,0],[0,0,s],[0,0,-s]];
+      p.beginShape(p.TRIANGLES);
+      const faces=[[0,2,4],[2,1,4],[1,3,4],[3,0,4],[2,0,5],[1,2,5],[3,1,5],[0,3,5]];
+      for(const fc of faces)for(const vi of fc)p.vertex(...v[vi]);
+      p.endShape();
+    }
+    p.setup=function(){const el=document.getElementById('p-ring');cw=el.clientWidth;ch=el.clientHeight;const c=p.createCanvas(cw,ch,p.WEBGL);c.parent('p-ring');p.pixelDensity(1);layout();};
+    p.draw=function(){
+      p.background(255);
+      const pa=(playheadMs/(totalMs||1))*Math.PI*2 - Math.PI/2;
+      if(inside){
+        // câmera FÍSICA dentro do furo, olhando radialmente para fora.
+        // o olho fica um pouco atrás do centro; o alvo é a parede na direção do trecho ativo.
+        const viewAng = (follow||onlyActive) ? pa : (rotA - Math.PI/2);
+        const S=Math.min(cw,ch)/(R0*3.2)*(followZoom*1.3);
+        // posição do olho: perto do centro, levemente oposto ao alvo (para caber a parede)
+        const eyeR = R0*0.25;                 // dentro do furo
+        const ex=-Math.sin(viewAng)*eyeR, ez=-Math.cos(viewAng)*eyeR, ey=-R0*0.15;
+        // alvo: a parede na direção do trecho ativo (insideTilt olha cima/baixo)
+        const tx=Math.sin(viewAng)*R0, tz=Math.cos(viewAng)*R0, ty=insideTilt*R0;
+        p.camera(ex,ey,ez, tx,ty,tz, 0,1,0);
+        p.scale(S*0.28); // menos zoom: ver mais da forma
+      } else if(follow){
+        p.camera(); // reset câmera padrão
+        p.scale(Math.min(cw,ch)/(R0*3.2)*followZoom);
+        p.rotateX(0.35);
+        p.rotateY(-pa - Math.PI/2);
+        const ax=Math.sin(pa)*R0, ay=0, az=Math.cos(pa)*R0;
+        p.translate(-ax,-ay,-az);
+      } else {
+        p.camera(); // reset câmera padrão
+        p.scale(Math.min(cw,ch)/(R0*3.2)*zoom);
+        p.rotateX(rotX);p.rotateY(rotA);
+      }
+      const pRange=Math.max(1,pMax-pMin);
+      p.noStroke();
+      const gl=p.drawingContext;
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      for(const n of allNotes){
+        const fop=noteOpacity(n); if(fop<=0)continue;
+        const ang=(n.startMs/(totalMs||1))*Math.PI*2 - Math.PI/2;
+        // ângulo do meio da nota (centro do arco que ela ocupa no tempo)
+        const angMid=((n.startMs+n.durMs/2)/(totalMs||1))*Math.PI*2 - Math.PI/2;
+        const rad=R0 + n.xNorm*RW;
+        const x=Math.sin(angMid)*rad, z=Math.cos(angMid)*rad;
+        const y=-((n.midi-pMin)/pRange)*PITCH_H + PITCH_H/2;
+        const active=(n.startMs<=playheadMs&&n.startMs+n.durMs>playheadMs);
+        if(onlyActive&&!active)continue;
+        const [r,g,b]=n.color;
+        const o=(active?1.0:0.82)*fop;
+        p.fill(r,g,b,o*255);
+        const NOTE_SZ=4;
+        // comprimento = arco percorrido no tempo (Δângulo × raio)
+        const dAng=(n.durMs/(totalMs||1))*Math.PI*2;
+        const arcLen=Math.max(NOTE_SZ*0.4, dAng*rad);
+        let h=NOTE_SZ, esp=NOTE_SZ*0.7;
+        if(n.isGrace){ h=NOTE_SZ*0.5; esp=NOTE_SZ*0.5; }
+        if(n.wedge==='cresc' && n.wedgePos!=null) h *= 1.0 + n.wedgePos*0.6;   // cresce
+        else if(n.wedge==='dim' && n.wedgePos!=null) h *= 1.0 - n.wedgePos*0.6; // diminui
+        p.push();
+        p.translate(x,y,z);
+        p.rotateY(angMid); // X local na tangente (direção do tempo)
+        if(n.stemDown) p.rotateX(Math.PI);
+        if(n.alter) p.rotateX(Math.PI);
+
+        if(n.mute){
+          // surdina → prisma girado 45° (losango)
+          p.push();p.rotateX(Math.PI/4);p.box(arcLen, h*0.72, esp*0.72);p.pop();
+        } else if(n.harmonic){
+          // harmônico → só a faixa superior (meia altura, deslocada p/ cima) com corte
+          p.push();p.translate(0,-h*0.28,0);
+          p.beginShape(p.TRIANGLES);
+          p.vertex(-arcLen/2,-h*0.22,esp/2);p.vertex(arcLen/2,-h*0.22,esp/2);p.vertex(arcLen/2,h*0.22,esp/2);
+          p.vertex(-arcLen/2,-h*0.22,-esp/2);p.vertex(arcLen/2,-h*0.22,-esp/2);p.vertex(arcLen/2,h*0.22,-esp/2);
+          p.endShape();
+          p.box(arcLen,h*0.44,esp*0.7);
+          p.pop();
+        } else if(n.gliss){
+          // glissando → lâmina triangular fina, subindo à direita (inverte se desce)
+          const dir=n.glissDown?-1:1;
+          const gface=z=>{p.beginShape();
+            p.vertex(-arcLen/2, -h/2*dir, z);
+            p.vertex(-arcLen/2+arcLen*0.22, -h/2*dir, z);
+            p.vertex(arcLen/2, h/2*dir, z);
+            p.endShape(p.CLOSE);};
+          gface(esp/2); gface(-esp/2);
+          // parede lateral pra dar volume à lâmina
+          p.beginShape(p.TRIANGLE_STRIP);
+          const pts=[[-arcLen/2,-h/2*dir],[-arcLen/2+arcLen*0.22,-h/2*dir],[arcLen/2,h/2*dir],[-arcLen/2,-h/2*dir]];
+          for(const [px,py] of pts){p.vertex(px,py,esp/2);p.vertex(px,py,-esp/2);}
+          p.endShape();
+        } else if(n.tech==='pizz'){
+          // pizzicato → prisma triangular (base embaixo, ponta em cima)
+          p.beginShape(p.TRIANGLES);
+          // face frente
+          p.vertex(0,-h/2,esp/2); p.vertex(arcLen/2,h/2,esp/2); p.vertex(-arcLen/2,h/2,esp/2);
+          // face trás
+          p.vertex(0,-h/2,-esp/2); p.vertex(arcLen/2,h/2,-esp/2); p.vertex(-arcLen/2,h/2,-esp/2);
+          p.endShape();
+          p.push();p.translate(0,h/4,0);p.box(arcLen,h/2,esp*0.6);p.pop(); // preenche base
+        } else if(n.hasTremolo){
+          // tremolo → cubos em xadrez dentro do volume (nota "quebrada")
+          const div=Math.max(2,Math.min(4,(n.tremoloMarks||3)+1));
+          const cellX=arcLen/div, cellY=h/div;
+          for(let ix=0;ix<div;ix++)for(let iy=0;iy<div;iy++){
+            if((ix+iy)%2===0){
+              const px=-arcLen/2+(ix+0.5)*cellX, py=-h/2+(iy+0.5)*cellY;
+              p.push();p.translate(px,py,0);p.box(cellX*0.85,cellY*0.85,esp*0.85);p.pop();
+            }
+          }
+        } else if(n.hasTrill){
+          // trill → quadradinhos alternados em cima/baixo
+          const nb=Math.max(2,Math.round(arcLen/(h*0.6)));
+          const seg=arcLen/nb;
+          for(let k=0;k<nb;k++){
+            const px=-arcLen/2 + (k+0.5)*seg;
+            const up=(k%2===0)?h*0.25:-h*0.25;
+            p.push();p.translate(px,up,0);p.box(seg*0.8, h*0.5, esp);p.pop();
+          }
+        } else if(n.hasTurn || n.hasMordent){
+          // grupeto (giro completo) / mordente (giro curto p/ baixo)
+          const pattern = n.hasMordent ? [0,-1,0] : [0,1,0,-1];
+          const nf=pattern.length, seg=arcLen/nf;
+          for(let k=0;k<nf;k++){
+            const px=-arcLen/2+(k+0.5)*seg;
+            const off=pattern[k]*(h*0.6);
+            p.push();p.translate(px,off,0);p.box(seg*0.9, h, esp);p.pop();
+          }
+        } else if(n.pedal){
+          // pedal → corte horizontal: metade cima cheia, metade baixo dessaturada
+          p.push();p.translate(0,-h*0.25,0);p.box(arcLen, h*0.5, esp);p.pop();
+          p.fill(r,g,b,o*0.85*255);
+          p.push();p.translate(0, h*0.25,0);p.box(arcLen, h*0.5, esp);p.pop();
+          p.fill(r,g,b,o*255);
+        } else if(n.arpeggio){
+          // arpejo → V: dois braços verticais com vale no centro, extrudado
+          const vface=z=>{p.beginShape();
+            p.vertex(-arcLen/2,-h/2,z);p.vertex(-arcLen/6,-h/2,z);p.vertex(0,h*0.15,z);
+            p.vertex(arcLen/6,-h/2,z);p.vertex(arcLen/2,-h/2,z);
+            p.vertex(arcLen/2,h/2,z);p.vertex(-arcLen/2,h/2,z);p.endShape(p.CLOSE);};
+          vface(esp/2);vface(-esp/2);
+          p.box(arcLen,h,esp*0.6); // miolo
+        } else if(n.art1 || n.art2){
+          // articulação → prisma com topo cortado (perfil do artPolygon), metade+metade
+          const drawArtPrism=(art,x0,x1)=>{
+            const poly=artPolygon(art,'full'); if(!poly.length){p.box(x1-x0,h,esp);return;}
+            // extrude o polígono (x∈[-0.5,0.5]→[x0,x1], y∈[-0.5,0.5]→[-h/2,h/2]) na espessura esp
+            const map=pt=>[x0+(pt[0]+0.5)*(x1-x0), (n.stemDown||n.alter?-1:1)*pt[1]*h];
+            p.beginShape();
+            for(const pt of poly){const[mx,my]=map(pt);p.vertex(mx,my,esp/2);}
+            p.endShape(p.CLOSE);
+            p.beginShape();
+            for(const pt of poly){const[mx,my]=map(pt);p.vertex(mx,my,-esp/2);}
+            p.endShape(p.CLOSE);
+            // paredes laterais (liga frente e trás)
+            p.beginShape(p.TRIANGLE_STRIP);
+            for(const pt of poly.concat([poly[0]])){const[mx,my]=map(pt);p.vertex(mx,my,esp/2);p.vertex(mx,my,-esp/2);}
+            p.endShape();
+          };
+          if(n.art1===n.art2){ drawArtPrism(n.art1,-arcLen/2,arcLen/2); }
+          else { drawArtPrism(n.art1,-arcLen/2,0); drawArtPrism(n.art2,0,arcLen/2); }
+        } else {
+          // nota normal — box deitado no tempo
+          p.box(arcLen, h, esp);
+        }
+        // fermata → prolonga com o tamanho real da nota (altura normal)
+        if(n.hasFermata){
+          p.fill(r,g,b,o*140);
+          p.push();p.translate(arcLen*0.8,0,0);p.box(arcLen*0.5, h, esp*0.7);p.pop();
+        }
+        p.pop();
+      }
+      // linha do playhead (raio radial no ângulo atual) — some no modo só-tocando
+      if(!onlyActive){
+        p.stroke(110,110,110,150);p.strokeWeight(1.5);
+        p.line(Math.sin(pa)*(R0-RW),0,Math.cos(pa)*(R0-RW), Math.sin(pa)*(R0+RW),0,Math.cos(pa)*(R0+RW));
+      }
+    };
+    p.mousePressed=function(){if(p.mouseX>=0&&p.mouseX<=cw&&p.mouseY>=0&&p.mouseY<=ch){drag=true;lmx=p.mouseX;lmy=p.mouseY;}};
+    p.mouseReleased=function(){drag=false;};
+    p.mouseDragged=function(){if(drag){
+      if(inside){ rotA+=(p.mouseX-lmx)*0.01; insideTilt+=(p.mouseY-lmy)*0.006; insideTilt=Math.max(-0.8,Math.min(0.8,insideTilt)); } // dentro: olha em volta + cima/baixo
+      else { follow=false;updateCamBtns();rotA+=(p.mouseX-lmx)*0.01;rotX+=(p.mouseY-lmy)*0.008;rotX=Math.max(-Math.PI/2,Math.min(Math.PI/2,rotX)); }
+      lmx=p.mouseX;lmy=p.mouseY;}};
+    p.mouseWheel=function(e){if(p.mouseX>=0&&p.mouseX<=cw&&p.mouseY>=0&&p.mouseY<=ch){
+      if(follow){followZoom=Math.max(0.8,Math.min(8,followZoom*Math.exp(-e.delta*0.002)));}
+      else{zoom=Math.max(0.2,Math.min(6,zoom*Math.exp(-e.delta*0.002)));}
+      return false;}};
+    p.windowResized=function(){const el=document.getElementById('p-ring');cw=el.clientWidth;ch=el.clientHeight;p.resizeCanvas(cw,ch);layout();};
+  });
+}
+</script>
+</body>
+</html>
