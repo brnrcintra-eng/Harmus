@@ -49,6 +49,7 @@ canvas{display:block;}
 
 /* cruz de camera — SVG y=910..1043, x=40..380 */
 .cam-b{background:#e6e6e6;border:0;color:#666;font-family:inherit;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;cursor:pointer;outline:none;pointer-events:all;border-radius:17px;}
+.cam-b[data-cam="persp"]{padding-left:10px;padding-right:18px;}
 .cam-b.on{background:#333;color:#fff;}
 
 /* mixer de naipes — SVG sliders y=587..721 (54%..67% de 1080), dentro do box */
@@ -56,7 +57,7 @@ canvas{display:block;}
 
 /* player — SVG: box x=505 y=1007 w=910 h=48 */
 #scrub-wrap{position:absolute;left:26.3%;bottom:4.2%;width:47.4%;height:48px;background:#e6e6e6;display:flex;align-items:center;gap:14px;padding:0 20px;border-radius:24px;z-index:7;}
-#btn-play{background:#111;border:0;color:#fff;font-family:inherit;font-size:22px;cursor:pointer;outline:none;line-height:1;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;flex-shrink:0;}
+#btn-play{background:#111;border:0;color:#fff;font-family:inherit;font-size:13px;cursor:pointer;outline:none;line-height:1;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;flex-shrink:0;}
 #scrub-knob{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;background:#111;transform:translate(-50%,-50%);left:0%;pointer-events:none;box-shadow:0 0 0 5px rgba(255,255,255,0.9);}
 #scrub{flex:1;height:12px;background:#d4d4d4;position:relative;cursor:pointer;border-radius:6px;}
 #scrub-fill{height:100%;background:#111;width:0%;border-radius:6px;}
@@ -82,9 +83,10 @@ canvas{display:block;}
     </div>
     <button id="btn-start" style="background:#111;color:#fff;border:0;font-family:inherit;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:13px 36px;border-radius:24px;cursor:pointer;margin-top:4px;">▶ iniciar</button>
     <input type="file" id="file-input" accept=".xml,.musicxml,.mxl" style="display:none;">
-    <div id="status" style="font-size:8px;"></div>
   </div>
 </div>
+
+<div id="status" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);font-size:10px;letter-spacing:1px;color:#999;z-index:50;pointer-events:none;"></div>
 
 <div id="app">
   <span id="h-title">—</span>
@@ -489,10 +491,10 @@ function notesAt(t){const o=[];for(const n of allNotes){if(n.startMs<=t&&n.start
 // ── Upload ───────────────────────────────────────────────────
 const uploadScreen=document.getElementById('upload-screen'),app=document.getElementById('app'),statusEl=document.getElementById('status'),fileInput=document.getElementById('file-input');
 function handleFile(file){
-  if(!file)return;statusEl.textContent='lendo '+file.name+'...';
+  if(!file)return Promise.resolve();statusEl.textContent='lendo '+file.name+'...';
   if(/\.mxl$/i.test(file.name)){
-    file.arrayBuffer().then(b=>JSZip.loadAsync(b)).then(zip=>zip.file('META-INF/container.xml').async('string').then(c=>{const m=c.match(/full-path="([^"]+)"/);return zip.file(m?m[1]:Object.keys(zip.files).find(f=>/\.xml$/i.test(f)&&!/container/i.test(f))).async('string');})).then(x=>finish(x,file.name)).catch(e=>statusEl.textContent='erro: '+e.message);
-  } else file.text().then(x=>finish(x,file.name)).catch(e=>statusEl.textContent='erro: '+e.message);
+    return file.arrayBuffer().then(b=>JSZip.loadAsync(b)).then(zip=>zip.file('META-INF/container.xml').async('string').then(c=>{const m=c.match(/full-path="([^"]+)"/);return zip.file(m?m[1]:Object.keys(zip.files).find(f=>/\.xml$/i.test(f)&&!/container/i.test(f))).async('string');})).then(x=>finish(x,file.name)).catch(e=>statusEl.textContent='erro: '+e.message);
+  } else return file.text().then(x=>finish(x,file.name)).catch(e=>statusEl.textContent='erro: '+e.message);
 }
 function finish(xml,name){
   try{
@@ -508,6 +510,8 @@ function finish(xml,name){
     setPlayhead(0);
     updateWorkNav();
     statusEl.textContent=notes.length+' notas';
+    clearTimeout(window._statusFade);
+    window._statusFade=setTimeout(()=>{statusEl.textContent='';},2500);
   }catch(e){statusEl.textContent='erro: '+e.message;console.error(e);}
 }
 fileInput.addEventListener('change',e=>handleFile(e.target.files[0]));
@@ -534,13 +538,19 @@ function updateWorkNav(){
   navPrev.style.display = curWork>0 ? 'flex' : 'none';
   navNext.style.display = curWork<WORKS.length-1 ? 'flex' : 'none';
 }
+let isLoadingWork=false;
 function loadWork(i){
+  if(isLoadingWork)return;
   curWork=Math.max(0,Math.min(WORKS.length-1,i));
   updateWorkNav();
   const w=WORKS[curWork];
   if(w.url){
+    isLoadingWork=true;
+    document.getElementById('worknav').style.opacity='0.4';
     statusEl.textContent='carregando '+w.title+'...';
-    fetch(w.url).then(r=>r.blob()).then(b=>handleFile(new File([b], w.url.split('/').pop()))).catch(e=>statusEl.textContent='erro: '+e.message);
+    fetch(w.url).then(r=>r.blob()).then(b=>handleFile(new File([b], w.url.split('/').pop())))
+      .catch(e=>statusEl.textContent='erro: '+e.message)
+      .finally(()=>{isLoadingWork=false;document.getElementById('worknav').style.opacity='1';});
   } else {
     // obra ainda não vinculada — por enquanto abre o seletor de arquivo
     fileInput.click();
@@ -585,6 +595,7 @@ btnPlay.addEventListener('click',()=>{if(typeof hideEndScreen==='function')hideE
 setInterval(()=>{if(isPlaying&&loaded){const now=performance.now();setPlayhead(playheadMs+(now-lastMilli));lastMilli=now;scheduleAudio();if(playheadMs>=totalMs){isPlaying=false;btnPlay.textContent='▶';showEndScreen();}}},16);
 
 // ── Tela de fim (dois boxes: nova obra / rescutar) ──
+let endNextBtn=null;
 function showEndScreen(){
   let el=document.getElementById('end-screen');
   if(!el){
@@ -600,8 +611,11 @@ function showEndScreen(){
     };
     el.appendChild(mk('escutar de novo','↺',()=>{hideEndScreen();setPlayhead(0);isPlaying=true;lastMilli=performance.now();document.getElementById('btn-play').textContent='⏸';if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();}));
     el.appendChild(mk('outra obra','♪',()=>{hideEndScreen();fileInput2.click();}));
+    endNextBtn=mk('próxima obra','⇥',()=>{hideEndScreen();loadWork(curWork+1);});
+    el.appendChild(endNextBtn);
     document.getElementById('app').appendChild(el);
   }
+  if(endNextBtn)endNextBtn.style.display = (curWork<WORKS.length-1) ? 'flex' : 'none';
   el.style.display='flex';
 }
 function hideEndScreen(){const el=document.getElementById('end-screen');if(el)el.style.display='none';}
