@@ -30,6 +30,7 @@ canvas{display:block;}
 #worknum{width:56px;height:44px;border-radius:22px;background:#e6e6e6;display:flex;align-items:center;justify-content:center;font-size:16px;color:#333;}
 #btn-newwork{width:32px;height:32px;border-radius:50%;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:4px;flex-shrink:0;}
 #btn-home{position:absolute;top:24px;right:2.08%;width:34px;height:34px;border-radius:50%;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:9;}
+#btn-info{position:absolute;top:66px;right:2.08%;width:34px;height:34px;border-radius:50%;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:9;}
 
 /* barra de cores — SVG: x=49 y=222 w=36 h=667 */
 #color-bar{position:absolute;left:2.4%;top:20.5%;width:22px;height:58%;background:#e0e0e0;z-index:5;display:flex;flex-direction:column;border-radius:11px;overflow:hidden;}
@@ -83,7 +84,7 @@ canvas{display:block;}
       Use <b>← →</b> para trocar de obra · os <b>controles</b> isolam naipes, melodia e harmonia · o <b>player</b> percorre o tempo
     </div>
     <button id="btn-start" style="background:#111;color:#fff;border:0;font-family:inherit;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:13px 36px;border-radius:24px;cursor:pointer;margin-top:4px;">iniciar</button>
-    <button id="btn-info-onboard" style="background:none;border:0;color:#999;font-family:inherit;font-size:10px;letter-spacing:1px;text-decoration:underline;cursor:pointer;margin-top:2px;">▦ catálogo de formas</button>
+    <button id="btn-info-onboard" style="background:none;border:0;color:#999;font-family:inherit;font-size:10px;letter-spacing:1px;text-decoration:underline;cursor:pointer;margin-top:2px;">(i) catálogo de formas</button>
     <input type="file" id="file-input" accept=".xml,.musicxml,.mxl" style="display:none;">
   </div>
 </div>
@@ -99,6 +100,7 @@ canvas{display:block;}
 
 <div id="app">
   <button id="btn-home" title="voltar ao início">⌂</button>
+  <button id="btn-info" title="catálogo de formas">(i)</button>
   <span id="h-title">—</span>
   <span id="h-author">—</span>
   <span id="tag">1.01 · HARMUS</span>
@@ -578,9 +580,10 @@ if(btnHome)btnHome.addEventListener('click',()=>{
 });
 // popup do catálogo de formas (abre num iframe, sem sair da página)
 const formasModal=document.getElementById('formas-modal'), formasFrame=document.getElementById('formas-frame');
-function openFormas(){ if(!formasFrame.src)formasFrame.src='harmus_catalogo_formas.html'; formasModal.style.display='flex'; }
+function openFormas(){ if(!formasFrame.getAttribute('src'))formasFrame.setAttribute('src','harmus_catalogo_formas.html'); formasModal.style.display='flex'; }
 function closeFormas(){ formasModal.style.display='none'; }
 document.getElementById('btn-info-onboard')?.addEventListener('click',openFormas);
+document.getElementById('btn-info')?.addEventListener('click',openFormas);
 document.getElementById('formas-close')?.addEventListener('click',closeFormas);
 formasModal.addEventListener('click',e=>{ if(e.target===formasModal)closeFormas(); });
 // botão recomeçar — volta ao início e toca
