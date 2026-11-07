@@ -49,6 +49,10 @@ canvas{display:block;}
 .tl-meta{display:flex;align-items:center;gap:14px;padding-top:6px;}
 #tl-range{font-size:11px;color:#555;white-space:nowrap;}
 #f-clear{background:none;border:0;font-family:inherit;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#999;cursor:pointer;text-decoration:underline;padding:0;visibility:hidden;}
+.card-del{position:absolute;top:10px;right:10px;z-index:2;min-width:26px;height:26px;padding:0 9px;border-radius:13px;border:0;background:rgba(255,255,255,.9);color:#777;font-family:inherit;font-size:11px;cursor:pointer;opacity:0;transition:opacity .15s;}
+.card:hover .card-del,.card-del[data-armed]{opacity:1;}
+@media(hover:none){.card-del{opacity:1;}}
+.card-del[data-armed]{background:#111;color:#fff;}
 .grid-empty{grid-column:1/-1;font-size:12px;color:#999;padding:48px 0;text-align:center;}
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:30px var(--gut);padding:16px var(--mg) 64px;}
 .card{cursor:pointer;display:flex;flex-direction:column;gap:12px;}
@@ -66,8 +70,11 @@ canvas{display:block;}
 #app{position:fixed;inset:0;display:none;z-index:5;}
 .panel{position:absolute;overflow:hidden;background:#fff;}
 
-#h-title{position:absolute;top:8%;left:2.08%;transform:translateY(-100%);font-size:30px;font-style:italic;font-weight:400;letter-spacing:0px;color:#111;z-index:8;max-width:44%;line-height:1.1;}
-#h-author{position:absolute;top:8%;left:50.5%;transform:translateY(-100%);font-size:18px;font-weight:400;letter-spacing:0px;color:#333;z-index:8;}
+/* HARMUS igual à home — clicar volta pro grid */
+#app-brand{position:absolute;top:44px;left:var(--mg);z-index:9;background:none;border:0;padding:0;font-family:inherit;font-size:15px;color:#999;letter-spacing:8px;text-transform:uppercase;cursor:pointer;transition:color .15s;}
+#app-brand:hover{color:#111;}
+#h-title{position:absolute;top:76px;left:var(--mg);font-size:30px;font-style:italic;font-weight:400;letter-spacing:0px;color:#111;z-index:8;max-width:44%;line-height:1.1;}
+#h-author{position:absolute;top:89px;left:50.5%;font-size:13px;font-weight:400;letter-spacing:.5px;color:#777;z-index:8;}
 #tag{position:absolute;bottom:2%;right:2.08%;font-size:12px;letter-spacing:2px;color:#999;z-index:8;}
 
 #worknav{display:none !important;} /* navegação entre obras agora é pelo grid (⌂) */
@@ -75,8 +82,7 @@ canvas{display:block;}
 .navbtn{width:56px;height:44px;border-radius:22px;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 #worknum{width:56px;height:44px;border-radius:22px;background:#e6e6e6;display:flex;align-items:center;justify-content:center;font-size:16px;color:#333;}
 #btn-newwork{width:32px;height:32px;border-radius:50%;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:4px;flex-shrink:0;}
-#btn-home{position:absolute;top:24px;right:2.08%;width:34px;height:34px;border-radius:50%;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:9;}
-#btn-info{position:absolute;top:66px;right:2.08%;width:34px;height:34px;border-radius:50%;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:9;}
+#btn-info{position:absolute;top:38px;right:2.08%;width:34px;height:34px;border-radius:50%;border:0;background:#e6e6e6;color:#555;font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:9;}
 
 #color-bar{position:absolute;left:2.4%;top:20.5%;width:22px;height:58%;background:#e0e0e0;z-index:5;display:flex;flex-direction:column;border-radius:11px;overflow:hidden;}
 
@@ -123,6 +129,7 @@ canvas{display:block;}
   </div>
   <div id="home-count"></div>
   <div id="grid-filters">
+    <div class="f-row"><span class="f-lbl">origem</span><div class="f-chips" id="f-src"></div></div>
     <div class="f-row"><span class="f-lbl">compositor</span><div class="f-chips" id="f-composers"></div></div>
     <div class="f-row"><span class="f-lbl">época</span>
       <div id="timeline">
@@ -147,7 +154,7 @@ canvas{display:block;}
 
 <!-- ══ PLAYER ══ -->
 <div id="app">
-  <button id="btn-home" title="voltar às obras">⌂</button>
+  <button id="app-brand" title="voltar às obras">HARMUS</button>
   <button id="btn-info" title="catálogo de formas">(i)</button>
   <span id="h-title">—</span>
   <span id="h-author">—</span>
@@ -208,22 +215,185 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 // ══════════════════════════════════════════════════════════════
 const REPO={owner:'brnrcintra-eng',repo:'Harmus',branch:'main',dir:'obras'};
 const RAW=`https://raw.githubusercontent.com/${REPO.owner}/${REPO.repo}/${REPO.branch}/${REPO.dir}/`;
-// year = ano de composição (usado no filtro de época). obras.json pode sobrescrever tudo isso.
-const KNOWN={
-  'arabesque-no-1-claude-debussy-orchestration.mxl':{title:'Arabesco No. 1',composer:'Debussy',year:1888},
-  'beethoven-symphony-no-5-op67-mvt-1.mxl':{title:'Sinfonia No. 5, Op. 67 (1º mov.)',composer:'Beethoven',year:1808},
-  'bolero-maurice-ravel.mxl':{title:'Boléro',composer:'Ravel',year:1928},
-  'requiem-totenmesse-giuseppi-verdi.mxl':{title:'Requiem (Totenmesse)',composer:'Verdi',year:1874},
-  'symphony-no-9-finale-ode-to-joy-symphony-spectacular-collosus-800-followers.mxl':{title:'Sinfonia No. 9, Final "Ode à Alegria"',composer:'Beethoven',year:1824},
-  'waltz-no-2-schwartz.mxl':{title:'Valsa No. 2',composer:'Shostakovich',year:1956},
+// ══════════════════════════════════════════════════════════════
+//  BASE DE COMPOSITORES — nome, nascimento, morte e palavras que o Harmus
+//  procura no nome do arquivo / no MusicXML pra reconhecer o autor.
+//  Obra nova sem ficha: o Harmus acha o compositor aqui e usa o meio da
+//  carreira dele como ano (pra cair na época certa do filtro).
+// ══════════════════════════════════════════════════════════════
+const COMPOSERS=[
+  // Barroco
+  {n:'Monteverdi',full:'Claudio Monteverdi',b:1567,d:1643,k:['monteverdi']},
+  {n:'Pachelbel',full:'Johann Pachelbel',b:1653,d:1706,k:['pachelbel']},
+  {n:'Purcell',full:'Henry Purcell',b:1659,d:1695,k:['purcell']},
+  {n:'Albinoni',full:'Tomaso Albinoni',b:1671,d:1751,k:['albinoni']},
+  {n:'Vivaldi',full:'Antonio Vivaldi',b:1678,d:1741,k:['vivaldi']},
+  {n:'Telemann',full:'Georg Philipp Telemann',b:1681,d:1767,k:['telemann']},
+  {n:'Rameau',full:'Jean-Philippe Rameau',b:1683,d:1764,k:['rameau']},
+  {n:'Bach',full:'Johann Sebastian Bach',b:1685,d:1750,k:['johann sebastian bach','j s bach','bach','bwv']},
+  {n:'Händel',full:'Georg Friedrich Händel',b:1685,d:1759,k:['handel','haendel','hwv']},
+  {n:'Scarlatti',full:'Domenico Scarlatti',b:1685,d:1757,k:['scarlatti']},
+  // Clássico
+  {n:'Gluck',full:'Christoph Willibald Gluck',b:1714,d:1787,k:['gluck']},
+  {n:'Haydn',full:'Joseph Haydn',b:1732,d:1809,k:['haydn','hob']},
+  {n:'Mozart',full:'Wolfgang Amadeus Mozart',b:1756,d:1791,k:['mozart','k 525','kv']},
+  {n:'Rouget de Lisle',full:'Claude-Joseph Rouget de Lisle',b:1760,d:1836,k:['rouget de lisle','marseillaise']},
+  {n:'Beethoven',full:'Ludwig van Beethoven',b:1770,d:1827,k:['beethoven','fur elise','ode to joy','ode an die freude']},
+  {n:'Rossini',full:'Gioachino Rossini',b:1792,d:1868,k:['rossini']},
+  {n:'Schubert',full:'Franz Schubert',b:1797,d:1828,k:['schubert']},
+  // Romântico
+  {n:'Berlioz',full:'Hector Berlioz',b:1803,d:1869,k:['berlioz','symphonie fantastique']},
+  {n:'Mendelssohn',full:'Felix Mendelssohn',b:1809,d:1847,k:['mendelssohn','hebrides','hebriden']},
+  {n:'Chopin',full:'Frédéric Chopin',b:1810,d:1849,k:['chopin']},
+  {n:'Schumann',full:'Robert Schumann',b:1810,d:1856,k:['schumann']},
+  {n:'Liszt',full:'Franz Liszt',b:1811,d:1886,k:['liszt']},
+  {n:'Verdi',full:'Giuseppe Verdi',b:1813,d:1901,k:['verdi']},
+  {n:'Wagner',full:'Richard Wagner',b:1813,d:1883,k:['wagner','wwv']},
+  {n:'Offenbach',full:'Jacques Offenbach',b:1819,d:1880,k:['offenbach']},
+  {n:'Bruckner',full:'Anton Bruckner',b:1824,d:1896,k:['bruckner']},
+  {n:'Smetana',full:'Bedřich Smetana',b:1824,d:1884,k:['smetana']},
+  {n:'Johann Strauss II',full:'Johann Strauss II',b:1825,d:1899,k:['johann strauss','strauss jr','strauss ii']},
+  {n:'Borodin',full:'Alexander Borodin',b:1833,d:1887,k:['borodin']},
+  {n:'Brahms',full:'Johannes Brahms',b:1833,d:1897,k:['brahms']},
+  {n:'Saint-Saëns',full:'Camille Saint-Saëns',b:1835,d:1921,k:['saint saens']},
+  {n:'Carlos Gomes',full:'Antônio Carlos Gomes',b:1836,d:1896,k:['carlos gomes','il guarany','o guarani']},
+  {n:'Bizet',full:'Georges Bizet',b:1838,d:1875,k:['bizet']},
+  {n:'Mussorgsky',full:'Modest Mussorgsky',b:1839,d:1881,k:['mussorgsky','moussorgsky','musorgsky','pictures at an exhibition']},
+  {n:'Tchaikovsky',full:'Piotr Ilitch Tchaikovsky',b:1840,d:1893,k:['tchaikovsky','tschaikowsky','tchaikowsky','chaikovsky','swan lake','nutcracker','1812 overture']},
+  {n:'Dvořák',full:'Antonín Dvořák',b:1841,d:1904,k:['dvorak','new world']},
+  {n:'Grieg',full:'Edvard Grieg',b:1843,d:1907,k:['grieg']},
+  {n:'Rimsky-Korsakov',full:'Nikolai Rimsky-Korsakov',b:1844,d:1908,k:['rimsky korsakov','scheherazade']},
+  {n:'Fauré',full:'Gabriel Fauré',b:1845,d:1924,k:['faure']},
+  {n:'Elgar',full:'Edward Elgar',b:1857,d:1934,k:['elgar']},
+  {n:'Puccini',full:'Giacomo Puccini',b:1858,d:1924,k:['puccini']},
+  {n:'Mahler',full:'Gustav Mahler',b:1860,d:1911,k:['mahler']},
+  {n:'Debussy',full:'Claude Debussy',b:1862,d:1918,k:['debussy','clair de lune','suite bergamasque']},
+  {n:'Ernesto Nazareth',full:'Ernesto Nazareth',b:1863,d:1934,k:['nazareth']},
+  {n:'Richard Strauss',full:'Richard Strauss',b:1864,d:1949,k:['richard strauss','zarathustra']},
+  {n:'Dukas',full:'Paul Dukas',b:1865,d:1935,k:['dukas','sorcerer s apprentice','apprenti sorcier']},
+  {n:'Sibelius',full:'Jean Sibelius',b:1865,d:1957,k:['sibelius','finlandia']},
+  {n:'Satie',full:'Erik Satie',b:1866,d:1925,k:['satie','gymnopedie']},
+  // Moderno
+  {n:'Rachmaninoff',full:'Sergei Rachmaninoff',b:1873,d:1943,k:['rachmaninoff','rachmaninov','rachmaninow']},
+  {n:'Holst',full:'Gustav Holst',b:1874,d:1934,k:['holst','the planets']},
+  {n:'Schoenberg',full:'Arnold Schoenberg',b:1874,d:1951,k:['schoenberg','schonberg']},
+  {n:'Ravel',full:'Maurice Ravel',b:1875,d:1937,k:['ravel','bolero','daphnis']},
+  {n:'Zequinha de Abreu',full:'Zequinha de Abreu',b:1880,d:1935,k:['zequinha de abreu','zequinha','tico tico']},
+  {n:'Bartók',full:'Béla Bartók',b:1881,d:1945,k:['bartok']},
+  {n:'Stravinsky',full:'Igor Stravinsky',b:1882,d:1971,k:['stravinsky','strawinsky','rite of spring','firebird']},
+  {n:'Villa-Lobos',full:'Heitor Villa-Lobos',b:1887,d:1959,k:['villa lobos','bachianas']},
+  {n:'Prokofiev',full:'Sergei Prokofiev',b:1891,d:1953,k:['prokofiev','prokofieff']},
+  {n:'Lili Boulanger',full:'Lili Boulanger',b:1893,d:1918,k:['lili boulanger','boulanger']},
+  {n:'Orff',full:'Carl Orff',b:1895,d:1982,k:['orff','carmina burana']},
+  {n:'Gershwin',full:'George Gershwin',b:1898,d:1937,k:['gershwin']},
+  {n:'Cheng Mao-yun',full:'Cheng Mao-yun',b:1900,d:1957,k:['cheng mao yun','mao yun']},
+  {n:'Copland',full:'Aaron Copland',b:1900,d:1990,k:['copland']},
+  {n:'Shostakovich',full:'Dmitri Shostakovich',b:1906,d:1975,k:['shostakovich','schostakowitsch','chostakovitch']},
+  {n:'Camargo Guarnieri',full:'Camargo Guarnieri',b:1907,d:1993,k:['guarnieri']},
+  {n:'Messiaen',full:'Olivier Messiaen',b:1908,d:1992,k:['messiaen']},
+  {n:'Barber',full:'Samuel Barber',b:1910,d:1981,k:['samuel barber','adagio for strings']},
+  // Contemporâneo
+  {n:'Bernstein',full:'Leonard Bernstein',b:1918,d:1990,k:['bernstein']},
+  {n:'Ligeti',full:'György Ligeti',b:1923,d:2006,k:['ligeti']},
+  {n:'Morricone',full:'Ennio Morricone',b:1928,d:2020,k:['morricone']},
+  {n:'Shunsuke Kikuchi',full:'Shunsuke Kikuchi',b:1931,d:2023,k:['kikuchi','dragon ball']},
+  {n:'John Williams',full:'John Williams',b:1932,d:null,k:['john williams','star wars','jurassic park']},
+  {n:'Arvo Pärt',full:'Arvo Pärt',b:1935,d:null,k:['arvo part']},
+  {n:'Philip Glass',full:'Philip Glass',b:1937,d:null,k:['philip glass']},
+  {n:'Hans Zimmer',full:'Hans Zimmer',b:1957,d:null,k:['zimmer']},
+  {n:'Koji Kondo',full:'Koji Kondo',b:1961,d:null,k:['koji kondo','kondo','super mario','zelda']},
+  {n:'Gregson-Williams & Powell',full:'Harry Gregson-Williams & John Powell',b:1961,d:null,k:['gregson williams','shrek']},
+  {n:'Utada Hikaru',full:'Utada Hikaru',b:1983,d:null,k:['utada','hikaru']},
+];
+const COMP_BY_NAME=Object.fromEntries(COMPOSERS.map(c=>[c.n,c]));
+const normTxt=s=>' '+(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()+' ';
+// acha o compositor cujo nome aparece mais cedo no texto (ex.: "bach ... transcrito por elgar" → Bach)
+function findComposer(...texts){
+  for(const t of texts){
+    const s=normTxt(t); if(s.trim()==='')continue;
+    let best=null,bestAt=1e9;
+    for(const c of COMPOSERS) for(const k of c.k){
+      const at=s.indexOf(' '+k+' ');
+      if(at>=0&&(at<bestAt||(at===bestAt&&k.length>best.k))){bestAt=at;best={c,k:k.length};}
+    }
+    if(best)return best.c;
+  }
+  return null;
+}
+// ano típico de um compositor (meio da vida adulta) — usado quando a obra não tem ano
+const floruit=c=>Math.round(((c.b+25)+Math.min(c.d||2026,2026))/2);
+
+// ══════════════════════════════════════════════════════════════
+//  BASE DE OBRAS — ficha de cada arquivo da pasta obras/
+//  t = título · c = compositor (nome igual ao da base acima) · y = ano de composição
+//  Obra nova fora da lista: o Harmus deduz compositor e ano sozinho.
+//  obras.json (opcional) ainda pode sobrescrever qualquer coisa.
+// ══════════════════════════════════════════════════════════════
+const KNOWN_RAW={
+  'arabesque-no-1-claude-debussy-orchestration.mxl':['Arabesque No. 1','Debussy',1888],
+  'a-midsummer-nights-dream-overture-op21-felix-mendelssohn.mxl':['Sonho de uma Noite de Verão, Abertura Op. 21','Mendelssohn',1826],
+  'also-sprach-zarathustra-op-30-richard-strauss.mxl':['Assim Falou Zaratustra, Op. 30','Richard Strauss',1896],
+  'richard-strauss-op-30-also-sprach-zarathustra.mxl':['Assim Falou Zaratustra, Op. 30 (versão 2)','Richard Strauss',1896],
+  'ballad-on-themes-from-shrek-12.mxl':['Balada sobre temas de Shrek','Gregson-Williams & Powell',2001],
+  'Beethoven_Symphony_No._5_1st_movement_Piano_solo.mxl':['Sinfonia No. 5, 1º mov. (piano solo)','Beethoven',1808],
+  'beethoven-symphony-no-5-op67-mvt-1.mxl':['Sinfonia No. 5, Op. 67 (1º mov.)','Beethoven',1808],
+  'symphony-no-5-in-c-minor-op-67-ludwig-van-beethoven.mxl':['Sinfonia No. 5 em Dó menor, Op. 67','Beethoven',1808],
+  'symphony-n6-pastoral-beethoven.mxl':['Sinfonia No. 6 "Pastoral"','Beethoven',1808],
+  'beethoven-symphony-no-9-op-125.mxl':['Sinfonia No. 9, Op. 125','Beethoven',1824],
+  'beethoven-symphony-no-9-op125-mvt-1.mxl':['Sinfonia No. 9, Op. 125 (1º mov.)','Beethoven',1824],
+  'beethoven-symphony-no-9-op125-mvt-4.mxl':['Sinfonia No. 9, Op. 125 (4º mov.)','Beethoven',1824],
+  'symphony-no-9-finale-ode-to-joy-symphony-spectacular-collosus-800-followers.mxl':['Sinfonia No. 9, Final "Ode à Alegria"','Beethoven',1824],
+  'Fur_Elise_Easy_Piano.mxl':['Für Elise (piano fácil)','Beethoven',1810],
+  'bolero-maurice-ravel.mxl':['Boléro','Ravel',1928],
+  'daphnis-et-chloe-maurice-ravel.mxl':['Daphnis et Chloé','Ravel',1912],
+  'ravel-pavane-pour-une-infante-defunte-orchestral-version.mxl':['Pavane pour une infante défunte','Ravel',1899],
+  'debussy-menuet-suite-bergamasque-orch-vinder-crass.mxl':['Menuet, Suite Bergamasque (orq.)','Debussy',1890],
+  'die-hebriden-op26-felix-mendelssohn.mxl':['As Hébridas, Op. 26','Mendelssohn',1830],
+  'mendelssohn-the-hebrides.mxl':['As Hébridas (versão 2)','Mendelssohn',1830],
+  'themes-from-hebrides-overture-op26-for-string-orchestra.mxl':['Temas de As Hébridas, Op. 26 (cordas)','Mendelssohn',1830],
+  'orchestration-kinderstucke-op72-n4-f-mendelssohn.mxl':['Kinderstücke, Op. 72 No. 4 (orq.)','Mendelssohn',1842],
+  'dies-irae-messa-da-requiem-giuseppe-verdi-dies-irae.mxl':['Dies Irae, Messa da Requiem','Verdi',1874],
+  'requiem-totenmesse-giuseppi-verdi.mxl':['Requiem (Totenmesse)','Verdi',1874],
+  'dragon-ball-medley-for-orchestra-full.mxl':['Dragon Ball, medley para orquestra','Shunsuke Kikuchi',1986],
+  'Erik_Satie_-_Gymnopedie_No.1.mxl':['Gymnopédie No. 1','Satie',1888],
+  'fantasia-and-fugue-in-c-minor-bwv-537-johann-sebastian-bach-transcribed-by-edward-elgar.mxl':['Fantasia e Fuga em Dó menor, BWV 537 (orq. Elgar)','Bach',1723],
+  'faust-et-helene-by-lili-boulanger.mxl':['Faust et Hélène','Lili Boulanger',1913],
+  'gustav-mahler-symphony-no-2-v-im-tempo-des-scherzos.mxl':['Sinfonia No. 2, V. Im Tempo des Scherzos','Mahler',1894],
+  'symphony-no1-gustav-mahler-mahlersyphonyno1mov3.mxl':['Sinfonia No. 1 (3º mov.)','Mahler',1888],
+  'symphony-no8-gustav-mahler-symphony-no8-in-eb-major.mxl':['Sinfonia No. 8 em Mi♭ maior','Mahler',1906],
+  'hikari-utada-hikaru.mxl':['Hikari','Utada Hikaru',2002],
+  'holst-the-planets-op-32.mxl':['Os Planetas, Op. 32','Holst',1916],
+  'kunstlerleben-op316-johann-strauss-jr.mxl':['Künstlerleben, Op. 316','Johann Strauss II',1867],
+  'la-marseillaise-claude-joseph-rouget-de-lisle.mxl':['La Marseillaise','Rouget de Lisle',1792],
+  'la-marseillaise-french-national-anthem.mxl':['La Marseillaise (hino nacional francês)','Rouget de Lisle',1792],
+  'Mozart_-_Piano_Sonata_No._16_-_Allegro.mxl':['Sonata para piano No. 16, Allegro','Mozart',1788],
+  'mozart-symphony-no-40-in-g-minor-k-550-i-molto-allegro.mxl':['Sinfonia No. 40 em Sol menor, K. 550 (I. Molto allegro)','Mozart',1788],
+  'new-super-mario-bros-wii-2-final-boss-phase-2-condensed-score-custom-audio.mxl':['New Super Mario Bros. Wii, chefe final','Koji Kondo',2009],
+  'pictures-at-an-exhibition-modest-mussorgsky.mxl':['Quadros de uma Exposição','Mussorgsky',1874],
+  'romeo-and-juliet-overture-fantasia-pyotr-ilyich-tchaikovsky-romeo-and-juliet-overture.mxl':['Romeu e Julieta, Abertura-Fantasia','Tchaikovsky',1869],
+  'swan-lake-no-10-scene-in-b-minor-opus-20-tchaikovsky.mxl':['O Lago dos Cisnes, No. 10 Cena, Op. 20','Tchaikovsky',1876],
+  'symphony-no-6-opus-74-1st-movement-tchaikovsky.mxl':['Sinfonia No. 6, Op. 74 (1º mov.)','Tchaikovsky',1893],
+  'tchaikovsky-1812-overture.mxl':['Abertura 1812','Tchaikovsky',1880],
+  'sergei-rachmaninoff-piano-concerto-no3-wip.mxl':['Concerto para piano No. 3','Rachmaninoff',1909],
+  'symphonie-fantastique-op-14-hector-berlioz.mxl':['Sinfonia Fantástica, Op. 14','Berlioz',1830],
+  'symphony-no-1-in-d-major-d-82-franz-schubert-symphony-no-1-in-d-major-d-82-4th-movement-discovering-shapes.mxl':['Sinfonia No. 1 em Ré maior, D. 82 (4º mov.)','Schubert',1813],
+  'symphony-no9-op95-antonin-dvorak-symphony-no-9-iv-allegro-con-fuoco-dvorak-arr-will-jackson.mxl':['Sinfonia No. 9 "Novo Mundo", IV. Allegro con fuoco','Dvořák',1893],
+  'the-sorcerers-apprentice-paul-dukas.mxl':['O Aprendiz de Feiticeiro','Dukas',1897],
+  'tico-tico-no-fuba.mxl':['Tico-Tico no Fubá','Zequinha de Abreu',1917],
+  'tristan-und-isolde-wwv-90-richard-wagner.mxl':['Tristão e Isolda, WWV 90','Wagner',1859],
+  'waltz-no-2-schwartz.mxl':['Valsa No. 2','Shostakovich',1956],
+  'zhong-hua-min-guo-guo-ge-cheng-mao-yun-sun-zhong-shan-national-anthem-of-the-republic-of-china-orchestral-arr-by-monuumax.mxl':['Hino Nacional da República da China','Cheng Mao-yun',1928],
 };
+const KNOWN=Object.fromEntries(Object.entries(KNOWN_RAW).map(([f,[title,composer,year]])=>[f,{title,composer,year}]));
+
 // linha do tempo do filtro
 const YMIN=1600, YMAX=2026;
 const ERAS=[
   {label:'Barroco',a:1600,b:1750},
   {label:'Clássico',a:1750,b:1820},
   {label:'Romântico',a:1820,b:1900},
-  {label:'Moderno',a:1900,b:2026},
+  {label:'Moderno',a:1900,b:1950},
+  {label:'Contemp.',a:1950,b:2026},
 ];
 const eraOf=y=>y?(ERAS.find(e=>y>=e.a&&y<e.b)||ERAS[ERAS.length-1]).label:'';
 
@@ -678,8 +848,16 @@ function makeWork(o){
   const w=Object.assign({status:'idle',hover:false,spin:Math.random()*Math.PI*2,tilt:{x:0,y:0,tx:0,ty:0}},o);
   if(!w.composer&&k.composer)w.composer=k.composer;
   if(!w.year&&k.year)w.year=k.year;
-  if(w.year)w.year=parseInt(w.year)||null;
+  if(!w.title&&k.title)w.title=k.title;
+  resolveMeta(w,w.file);
   return w;
+}
+// compositor → nome da base; sem ano → ano típico do compositor (marcado como aproximado)
+function resolveMeta(w,...texts){
+  const c=(w.composer&&(COMP_BY_NAME[w.composer]||findComposer(w.composer)))||findComposer(...texts);
+  if(c){w.comp=c;w.composer=c.n;}
+  w.year=parseInt(w.year)||null; w.yearApprox=false;
+  if(!w.year&&w.comp){w.year=floruit(w.comp);w.yearApprox=true;}
 }
 
 // A PASTA manda (todo .mxl/.musicxml/.xml que estiver em obras/ aparece).
@@ -737,7 +915,11 @@ function prepareWork(w,p){
   const k=KNOWN[w.file]||{};
   w.notes=p.notes; w.totalMs=p.totalMs;
   w.title=w.title||k.title||p.title||prettyName(w.file);
-  w.composer=w.composer||k.composer||(p.composer||'').trim().split(/\s+/).pop()||'';
+  if(!w.comp){ // não reconheceu pelo nome do arquivo: tenta pelo que está escrito dentro do MusicXML
+    const raw=(p.composer||'').trim();
+    w.composer=''; resolveMeta(w,raw,p.title,w.file);
+    if(!w.comp&&raw&&raw.length<40)w.composer=raw;
+  }
   const map={}; let pMin=127,pMax=0;
   for(const n of w.notes){
     if(!(n.part in map))map[n.part]=panFor(n.part,n.pan);
@@ -779,12 +961,19 @@ function addCard(w){
   });
   rv.addEventListener('pointerleave',()=>{w.hover=false;w.tilt.tx=0;w.tilt.ty=0;});
   c.addEventListener('click',()=>{location.hash=encodeURIComponent(w.id);});
+  if(w.local){ // remover (2 cliques: × → "remover?")
+    const del=document.createElement('button'); del.className='card-del'; del.textContent='×'; del.title='remover do seu acervo';
+    del.addEventListener('click',e=>{e.stopPropagation();
+      if(del.dataset.armed){removeLocalWork(w);return;}
+      del.dataset.armed='1'; del.textContent='remover?'; setTimeout(()=>{delete del.dataset.armed;del.textContent='×';},2500);});
+    rv.appendChild(del);
+  }
   grid.appendChild(c); updateCard(w);
 }
 function updateCard(w){
   const c=w.card; if(!c)return;
   c.querySelector('.card-title').textContent=w.title||KNOWN[w.file]?.title||prettyName(w.file);
-  c.querySelector('.card-composer').textContent=[w.composer,w.year].filter(Boolean).join(' · ');
+  c.querySelector('.card-composer').textContent=[w.composer,w.year&&((w.yearApprox?'c. ':'')+w.year),w.local&&'enviada por você'].filter(Boolean).join(' · ');
   c.querySelector('.card-status').textContent={idle:'na fila',loading:'carregando…',error:'erro ao ler',ready:''}[w.status];
   c.querySelector('.card-info').textContent= w.status==='ready' ? `${fmtTime(w.totalMs)} · ${w.instruments.length} partes · ${w.notes.length} notas` : '';
   if(w.status==='ready'||w.status==='error')refreshFilters();
@@ -795,11 +984,13 @@ function updateCount(){ refreshFilters(); }
 //  FILTROS — compositor (multi) + época/anos (linha do tempo com 2 alças)
 //  as épocas são atalhos que posicionam as alças
 // ══════════════════════════════════════════════════════════════
-const filt={comps:new Set(),y0:YMIN,y1:YMAX};
+const filt={comps:new Set(),y0:YMIN,y1:YMAX,src:'all'};
 const fullRange=()=>filt.y0<=YMIN&&filt.y1>=YMAX;
 const yearPct=y=>((y-YMIN)/(YMAX-YMIN))*100;
 function matchComp(w){return !filt.comps.size||filt.comps.has(w.composer);}
 function matchYear(w){return fullRange()||(w.year&&w.year>=filt.y0&&w.year<=filt.y1);}
+function matchSrc(w){return filt.src==='all'||(filt.src==='mine')===!!w.local;}
+const fSrc=$('f-src');
 const fComps=$('f-composers'), tlTrack=$('tl-track'), tlSel=$('tl-sel'), tlEras=$('tl-eras'), tlRange=$('tl-range'), fClear=$('f-clear');
 const tlHandles=[...tlTrack.querySelectorAll('.tl-h')];
 let _compKey='';
@@ -819,7 +1010,8 @@ function refreshFilters(){
   // chips de compositor (refeitos só quando a lista muda)
   const counts={};
   works.forEach(w=>{if(w.composer)counts[w.composer]=(counts[w.composer]||0)+1;});
-  const names=Object.keys(counts).sort((a,b)=>a.localeCompare(b));
+  const birth=n=>COMP_BY_NAME[n]?.b??9999;
+  const names=Object.keys(counts).sort((a,b)=>birth(a)-birth(b)||a.localeCompare(b)); // ordem cronológica
   const key=names.map(n=>n+counts[n]).join('|');
   if(key!==_compKey){
     _compKey=key; fComps.innerHTML='';
@@ -829,11 +1021,22 @@ function refreshFilters(){
     fComps.appendChild(all);
     names.forEach(n=>{
       const b=document.createElement('button'); b.className='chip'; b.dataset.c=n;
-      b.innerHTML=`${n}<span class="n">${counts[n]}</span>`;
+      const c=COMP_BY_NAME[n]; if(c)b.title=`${c.full} (${c.b}–${c.d||''})`;
+      b.innerHTML=`${n}<span class="n"></span>`;
       b.addEventListener('click',()=>{filt.comps.has(n)?filt.comps.delete(n):filt.comps.add(n);applyFilter();});
       fComps.appendChild(b);
     });
   }
+  // origem: acervo do Harmus x obras que a pessoa carregou
+  const nMine=works.filter(w=>w.local).length;
+  if(!nMine&&filt.src==='mine')filt.src='all';
+  fSrc.innerHTML='';
+  [['all','todas'],['repo','acervo Harmus'],['mine','enviadas por você']].forEach(([k,l])=>{
+    const b=document.createElement('button'); b.className='chip'; b.dataset.s=k;
+    b.innerHTML=l+(k==='mine'?`<span class="n">${nMine}</span>`:'');
+    b.addEventListener('click',()=>{filt.src=k;applyFilter();});
+    fSrc.appendChild(b);
+  });
   // pontinhos na linha do tempo: uma obra = um ponto no seu ano
   tlTrack.querySelectorAll('.tl-dot').forEach(d=>d.remove());
   works.forEach(w=>{
@@ -847,17 +1050,24 @@ function refreshFilters(){
 function applyFilter(){
   let shown=0;
   works.forEach(w=>{
-    const ok=matchComp(w)&&matchYear(w);
+    const ok=matchComp(w)&&matchYear(w)&&matchSrc(w);
     if(w.card)w.card.style.display=ok?'':'none';
     if(ok)shown++;
-    if(w.dot&&w.year)w.dot.classList.toggle('off',!(matchComp(w)&&w.year>=filt.y0&&w.year<=filt.y1));
+    if(w.dot&&w.year)w.dot.classList.toggle('off',!(matchComp(w)&&matchSrc(w)&&w.year>=filt.y0&&w.year<=filt.y1));
   });
-  fComps.querySelectorAll('.chip').forEach(b=>b.classList.toggle('on',b.dataset.c?filt.comps.has(b.dataset.c):!filt.comps.size));
+  // compositores: só os que têm obra na época/origem escolhida, com a contagem certa
+  const inScope={}; works.forEach(w=>{if(w.composer&&matchYear(w)&&matchSrc(w))inScope[w.composer]=(inScope[w.composer]||0)+1;});
+  fComps.querySelectorAll('.chip').forEach(b=>{
+    const n=b.dataset.c;
+    b.classList.toggle('on',n?filt.comps.has(n):!filt.comps.size);
+    if(n){ const k=inScope[n]||0; b.style.display=(k||filt.comps.has(n))?'':'none'; b.querySelector('.n').textContent=k; }
+  });
+  fSrc.querySelectorAll('.chip').forEach(b=>b.classList.toggle('on',b.dataset.s===filt.src));
   ERAS.forEach(e=>e.btn.classList.toggle('on',filt.y0===e.a&&filt.y1===e.b));
   tlSel.style.left=yearPct(filt.y0)+'%'; tlSel.style.width=(yearPct(filt.y1)-yearPct(filt.y0))+'%';
   tlHandles[0].style.left=yearPct(filt.y0)+'%'; tlHandles[1].style.left=yearPct(filt.y1)+'%';
   tlRange.textContent=fullRange()?'todas as épocas':`${filt.y0} — ${filt.y1}`;
-  const active=filt.comps.size||!fullRange();
+  const active=filt.comps.size||!fullRange()||filt.src!=='all';
   fClear.style.visibility=active?'visible':'hidden';
   const total=works.length;
   $('home-count').textContent=active?`${shown} de ${total} obras`:total+(total===1?' obra':' obras');
@@ -866,7 +1076,7 @@ function applyFilter(){
     if(!empty){empty=document.createElement('div');empty.className='grid-empty';empty.textContent='nenhuma obra nesse filtro';grid.appendChild(empty);}
   } else if(empty) empty.remove();
 }
-fClear.addEventListener('click',()=>{filt.comps.clear();filt.y0=YMIN;filt.y1=YMAX;applyFilter();});
+fClear.addEventListener('click',()=>{filt.comps.clear();filt.y0=YMIN;filt.y1=YMAX;filt.src='all';applyFilter();});
 
 // arrastar as alças (ou clicar na trilha: move a alça mais próxima)
 let tlDrag=-1;
@@ -883,11 +1093,37 @@ tlTrack.addEventListener('pointerdown',e=>{
 tlTrack.addEventListener('pointermove',e=>{if(tlDrag>=0)tlSet(tlDrag,tlYear(e));});
 tlTrack.addEventListener('pointerup',()=>tlDrag=-1);
 
-async function addLocalFile(file,open){
-  const w=makeWork({id:'local-'+Date.now()+'-'+file.name,file:file.name,fileObj:file,local:true});
+// ── obras enviadas pela pessoa: ficam guardadas neste navegador (IndexedDB) ──
+const UP={
+  _db:null,
+  open(){ if(this._db)return this._db;
+    return this._db=new Promise((res,rej)=>{ try{
+      const r=indexedDB.open('harmus',1);
+      r.onupgradeneeded=()=>r.result.createObjectStore('uploads',{keyPath:'id'});
+      r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+    }catch(e){rej(e);} }); },
+  async tx(mode,fn){ try{ const db=await this.open(); return await new Promise((res,rej)=>{
+      const t=db.transaction('uploads',mode), st=t.objectStore('uploads'), q=fn(st);
+      t.oncomplete=()=>res(q&&q.result); t.onerror=()=>rej(t.error); }); }catch(e){ console.warn('armazenamento indisponível',e); return null; } },
+  put(rec){return this.tx('readwrite',st=>st.put(rec));},
+  del(id){return this.tx('readwrite',st=>st.delete(id));},
+  async all(){return (await this.tx('readonly',st=>st.getAll()))||[];},
+};
+function addLocalWork(file,id){
+  const w=makeWork({id,file:file.name,fileObj:file,local:true});
   works.push(w); addCard(w); updateCount();
+  return w;
+}
+async function addLocalFile(file,open){
+  const id='local-'+Date.now()+'-'+file.name;
+  UP.put({id,name:file.name,blob:file,added:Date.now()});
+  const w=addLocalWork(file,id);
   await ensureLoaded(w);
   if(open&&w.status==='ready')location.hash=encodeURIComponent(w.id);
+}
+async function removeLocalWork(w){
+  await UP.del(w.id);
+  works=works.filter(x=>x!==w); w.card?.remove(); _compKey=''; refreshFilters();
 }
 $('file-input').addEventListener('change',e=>{const f=e.target.files[0];if(f)addLocalFile(f,false);e.target.value='';});
 $('file-input-2').addEventListener('change',e=>{const f=e.target.files[0];if(f)addLocalFile(f,true);e.target.value='';});
@@ -917,7 +1153,8 @@ async function openWork(w){
   if(decodeURIComponent(location.hash.slice(1))!==w.id)return; // usuário saiu enquanto carregava
   cur=w; view='player';
   home.style.display='none'; app.style.display='block';
-  $('h-title').textContent=w.title; $('h-author').textContent=w.composer||'';
+  $('h-title').textContent=w.title;
+  $('h-author').textContent=w.comp?`${w.comp.full} (${w.comp.b}–${w.comp.d||''})`:(w.composer||'');
   slice.resize(); notesP.resize();
   buildFilters();
   CS.init=false;
@@ -936,7 +1173,7 @@ function updateWorkNav(){
 function goWork(i){ if(i<0||i>=works.length)return; location.hash=encodeURIComponent(works[i].id); }
 navPrev.addEventListener('click',()=>goWork(curIndex()-1));
 navNext.addEventListener('click',()=>goWork(curIndex()+1));
-$('btn-home').addEventListener('click',()=>{location.hash='';});
+$('app-brand').addEventListener('click',()=>{location.hash='';});
 
 // catálogo de formas
 const formasModal=$('formas-modal'), formasFrame=$('formas-frame');
@@ -1379,7 +1616,9 @@ window.addEventListener('resize',()=>{renderer.setSize(window.innerWidth,window.
   requestAnimationFrame(frame);
   $('home-count').textContent='procurando obras…';
   works=await discoverWorks();
-  works.forEach(addCard); updateCount();
+  works.forEach(addCard);
+  for(const r of await UP.all()) addLocalWork(new File([r.blob],r.name),r.id); // obras que a pessoa já tinha enviado
+  updateCount();
   route();
   loadQueue();
 })();
